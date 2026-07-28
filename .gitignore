@@ -1,0 +1,18 @@
+# Node
+node_modules/
+dist/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+.venv/
+env/
+venv/
+*.sqlite3
+airway.db
+
+# OS
+.DS_Store
+Thumbs.db

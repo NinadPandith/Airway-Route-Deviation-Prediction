@@ -1,0 +1,24 @@
+# FastAPI Framework & Web Server
+fastapi
+uvicorn[standard]
+
+# Database & ORM
+sqlalchemy
+
+# Data Validation & Serialization
+pydantic
+
+# Utilities
+python-dotenv
+python-multipart
+requests
+
+# Data Processing
+pandas
+numpy
+matplotlib
+
+# Machine Learning
+scikit-learn
+xgboost
+joblib
