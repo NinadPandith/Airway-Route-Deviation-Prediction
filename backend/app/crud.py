@@ -122,21 +122,28 @@ def bulk_upsert_aircraft_telemetry(db: Session, aircraft_data_list: List[dict]):
     if not unique_incoming:
         return
 
-    stmt = insert(models.AircraftTelemetry).values(list(unique_incoming.values()))
+    # Process in chunks to avoid SQLite "too many SQL variables" error
+    # SQLite has a limit of 32766 variables per query. We have 10 columns per row, so max 3000 rows per query.
+    chunk_size = 500
+    values_list = list(unique_incoming.values())
     
-    # Update all fields except icao24 if the record already exists
-    update_dict = {
-        c.name: c
-        for c in stmt.excluded
-        if c.name not in ["id", "icao24"]
-    }
-    
-    upsert_stmt = stmt.on_conflict_do_update(
-        index_elements=["icao24"],
-        set_=update_dict
-    )
-    
-    db.execute(upsert_stmt)
+    for i in range(0, len(values_list), chunk_size):
+        chunk = values_list[i:i + chunk_size]
+        stmt = insert(models.AircraftTelemetry).values(chunk)
+        
+        # Update all fields except icao24 if the record already exists
+        update_dict = {
+            c.name: c
+            for c in stmt.excluded
+            if c.name not in ["id", "icao24"]
+        }
+        
+        upsert_stmt = stmt.on_conflict_do_update(
+            index_elements=["icao24"],
+            set_=update_dict
+        )
+        
+        db.execute(upsert_stmt)
     # We do NOT flush or commit here; let the caller handle db.commit() to ensure a single transaction.
 
 

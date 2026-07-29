@@ -493,35 +493,39 @@ export default function LiveMonitoring({ showNotification }) {
         </MapContainer>
       </div>
 
-      <div className="absolute top-4 left-4 right-[420px] z-[100] flex flex-col gap-2 pointer-events-none transition-all duration-300">
+      <div className="absolute top-6 left-6 right-[420px] z-[100] flex flex-col gap-4 pointer-events-none transition-all duration-500">
         <div className="flex items-center justify-between pointer-events-auto">
-          <div className="glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-6 shadow-2xl">
-            <div className="flex items-center gap-2">
-              <Compass className="w-5 h-5 text-cyan-400 animate-spin-slow" />
+          {/* Top Stats Bar */}
+          <div className="glass-panel px-5 py-3 rounded-2xl flex items-center gap-6 shadow-[0_8px_30px_rgba(0,0,0,0.4)] border border-slate-700/50 backdrop-blur-xl">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                <Compass className="w-5 h-5 animate-spin-slow drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
+              </div>
               <div>
-                <div className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">Airway Monitor</div>
-                <div className="text-sm font-bold text-white font-heading">LIVE TELEMETRY</div>
+                <div className="text-[9px] text-cyan-400/80 uppercase font-mono font-bold tracking-widest mb-0.5">Airway Monitor</div>
+                <div className="text-sm font-extrabold text-white font-heading tracking-wide">LIVE TELEMETRY</div>
               </div>
             </div>
-            <div className="h-6 w-px bg-slate-700"></div>
-            <div className="flex items-center gap-6">
-              <StatItem icon={<Plane />} label="Active" value={stats.total_live_aircraft} />
-              <StatItem icon={<Gauge />} label="Avg Speed" value={`${Math.round(stats.average_speed)} kts`} />
-              <StatItem icon={<Navigation />} label="Avg Alt" value={`${Math.round(stats.average_altitude)} ft`} />
+            <div className="h-8 w-px bg-slate-700/80"></div>
+            <div className="flex items-center gap-8">
+              <StatItem icon={<Plane />} label="Active Flights" value={stats.total_live_aircraft} />
+              <StatItem icon={<Gauge />} label="Fleet Avg Speed" value={`${Math.round(stats.average_speed)} kts`} />
+              <StatItem icon={<Navigation />} label="Fleet Avg Alt" value={`${Math.round(stats.average_altitude)} ft`} />
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Map Controls */}
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => setResetViewTrigger(prev => prev + 1)}
-              className="glass-panel p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors tooltip-trigger"
+              className="glass-panel p-3 rounded-xl text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 transition-all tooltip-trigger shadow-lg hover:shadow-cyan-500/20"
               title="Reset View to Bounds"
             >
               <Maximize className="w-5 h-5" />
             </button>
             <button 
               onClick={() => setShowFilters(!showFilters)}
-              className={`glass-panel p-2.5 rounded-xl transition-colors hover:bg-slate-800 ${showFilters ? 'bg-slate-800 border-cyan-500/50 text-cyan-400' : 'text-slate-300'}`}
+              className={`glass-panel p-3 rounded-xl transition-all shadow-lg ${showFilters ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30'}`}
               title="Toggle Filters"
             >
               <Filter className="w-5 h-5" />
@@ -529,64 +533,66 @@ export default function LiveMonitoring({ showNotification }) {
             <button 
               onClick={() => loadData(false)}
               disabled={refreshing}
-              className="glass-panel p-2.5 rounded-xl text-slate-300 hover:text-white transition-colors"
+              className="glass-panel p-3 rounded-xl text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-all shadow-lg hover:shadow-emerald-500/20 disabled:opacity-50"
               title="Manual Refresh"
             >
-              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin text-cyan-400' : ''}`} />
+              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin text-emerald-400' : ''}`} />
             </button>
           </div>
         </div>
 
+        {/* Filters Panel */}
         {showFilters && (
-          <div className="glass-panel p-4 rounded-2xl w-full max-w-2xl self-end shadow-2xl pointer-events-auto animate-fade-in border border-slate-700/50">
-            <div className="grid grid-cols-4 gap-4">
+          <div className="glass-panel p-5 rounded-2xl w-full max-w-2xl self-end shadow-[0_8px_30px_rgba(0,0,0,0.5)] pointer-events-auto animate-fade-in border border-cyan-500/20 backdrop-blur-xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-50 pointer-events-none"></div>
+            <div className="relative z-10 grid grid-cols-4 gap-5">
               <div className="col-span-4 sm:col-span-2">
-                <label className="text-[10px] font-mono text-slate-400 uppercase mb-1 block">Search Callsign/ICAO</label>
+                <label className="text-[10px] font-mono font-bold text-cyan-400/80 uppercase mb-1.5 block tracking-widest">Search Callsign/ICAO</label>
                 <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
-                  <input type="text" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} placeholder="Search..." className="w-full bg-slate-900/50 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"/>
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input type="text" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} placeholder="Search..." className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
                 </div>
               </div>
               <div className="col-span-4 sm:col-span-2">
-                <label className="text-[10px] font-mono text-slate-400 uppercase mb-1 block">Country Origin</label>
-                <input type="text" value={filters.country} onChange={e => setFilters({...filters, country: e.target.value})} placeholder="E.g. United States" className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"/>
+                <label className="text-[10px] font-mono font-bold text-cyan-400/80 uppercase mb-1.5 block tracking-widest">Country Origin</label>
+                <input type="text" value={filters.country} onChange={e => setFilters({...filters, country: e.target.value})} placeholder="E.g. United States" className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
               </div>
               <div className="col-span-4 sm:col-span-2">
-                <label className="text-[10px] font-mono text-slate-400 uppercase mb-1 block">Altitude Range (ft)</label>
+                <label className="text-[10px] font-mono font-bold text-cyan-400/80 uppercase mb-1.5 block tracking-widest">Altitude Range (ft)</label>
                 <div className="flex items-center gap-2">
-                  <input type="number" placeholder="Min" value={filters.minAlt} onChange={e => setFilters({...filters, minAlt: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"/>
-                  <span className="text-slate-500">-</span>
-                  <input type="number" placeholder="Max" value={filters.maxAlt} onChange={e => setFilters({...filters, maxAlt: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"/>
+                  <input type="number" placeholder="Min" value={filters.minAlt} onChange={e => setFilters({...filters, minAlt: e.target.value})} className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
+                  <span className="text-slate-500 font-bold">-</span>
+                  <input type="number" placeholder="Max" value={filters.maxAlt} onChange={e => setFilters({...filters, maxAlt: e.target.value})} className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
                 </div>
               </div>
               <div className="col-span-4 sm:col-span-2">
-                <label className="text-[10px] font-mono text-slate-400 uppercase mb-1 block">Speed Range (kts)</label>
+                <label className="text-[10px] font-mono font-bold text-cyan-400/80 uppercase mb-1.5 block tracking-widest">Speed Range (kts)</label>
                 <div className="flex items-center gap-2">
-                  <input type="number" placeholder="Min" value={filters.minSpeed} onChange={e => setFilters({...filters, minSpeed: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"/>
-                  <span className="text-slate-500">-</span>
-                  <input type="number" placeholder="Max" value={filters.maxSpeed} onChange={e => setFilters({...filters, maxSpeed: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"/>
+                  <input type="number" placeholder="Min" value={filters.minSpeed} onChange={e => setFilters({...filters, minSpeed: e.target.value})} className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
+                  <span className="text-slate-500 font-bold">-</span>
+                  <input type="number" placeholder="Max" value={filters.maxSpeed} onChange={e => setFilters({...filters, maxSpeed: e.target.value})} className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
                 </div>
               </div>
-              <div className="col-span-4 flex items-center gap-6 mt-2 border-t border-slate-700/50 pt-3">
-                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <div className="col-span-4 flex items-center gap-6 mt-2 border-t border-slate-700/50 pt-4">
+                <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer hover:text-white transition-colors group">
                   <input type="checkbox" checked={filters.showDelayed} onChange={e => setFilters({...filters, showDelayed: e.target.checked})} className="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-cyan-500" />
-                  Show Delayed Only
+                  <span className="group-hover:text-cyan-400 transition-colors">Show Delayed Only</span>
                 </label>
-                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer hover:text-white transition-colors group">
                   <input type="checkbox" checked={filters.showHighRisk} onChange={e => setFilters({...filters, showHighRisk: e.target.checked})} className="rounded bg-slate-900 border-slate-700 text-orange-500 focus:ring-orange-500" />
-                  Show High-Risk Only
+                  <span className="group-hover:text-orange-400 transition-colors">Show High-Risk Only</span>
                 </label>
-                <div className="flex items-center gap-2 ml-auto">
-                  <label className="text-xs text-slate-400">Max Display:</label>
+                <div className="flex items-center gap-3 ml-auto">
+                  <label className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">Max Display:</label>
                   <select 
                     value={filters.maxAircraft} 
                     onChange={e => setFilters({...filters, maxAircraft: e.target.value})}
-                    className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white"
+                    className="bg-slate-900/80 border border-slate-700/60 rounded-lg px-2 py-1 text-xs font-medium text-white focus:outline-none focus:border-cyan-500/50 cursor-pointer"
                   >
-                    <option value="300">300</option>
-                    <option value="500">500</option>
-                    <option value="1000">1000</option>
-                    <option value="All">All</option>
+                    <option value="300">300 Aircraft</option>
+                    <option value="500">500 Aircraft</option>
+                    <option value="1000">1000 Aircraft</option>
+                    <option value="All">All Aircraft (Slow)</option>
                   </select>
                 </div>
               </div>
@@ -595,29 +601,29 @@ export default function LiveMonitoring({ showNotification }) {
         )}
       </div>
 
-      <div className={`absolute top-0 right-0 h-full w-[400px] glass-panel border-l border-slate-800/80 z-[200] transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl ${selectedAircraft ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`absolute top-0 right-0 h-full w-[420px] glass-panel border-l border-slate-700/50 z-[200] transform transition-transform duration-500 ease-out flex flex-col shadow-[-10px_0_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl bg-slate-950/80 ${selectedAircraft ? 'translate-x-0' : 'translate-x-full'}`}>
         {selectedAircraft && (
           <>
-            <div className="flex items-center justify-between p-4 border-b border-slate-800/60 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10">
+            <div className="flex items-center justify-between p-5 border-b border-slate-700/50 bg-gradient-to-r from-slate-900/90 to-slate-900/60 sticky top-0 z-10 shadow-md">
               <div>
-                <h2 className="text-lg font-bold text-white font-heading">{selectedAircraft.callsign || 'UNKNOWN CALLSIGN'}</h2>
-                <div className="text-xs text-cyan-400 font-mono">ICAO: {selectedAircraft.icao24}</div>
+                <h2 className="text-xl font-extrabold text-white font-heading tracking-wide drop-shadow-sm">{selectedAircraft.callsign || 'UNKNOWN CALLSIGN'}</h2>
+                <div className="text-xs text-cyan-400 font-mono font-bold tracking-widest mt-1">ICAO: {selectedAircraft.icao24}</div>
               </div>
-              <button onClick={closePanel} className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+              <button onClick={closePanel} className="p-2.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-all hover:rotate-90">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar pb-20">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar pb-24">
               
               {/* FLIGHT INFORMATION */}
-              <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/40">
-                <button onClick={() => toggleSection('flight')} className="w-full p-3 flex items-center justify-between bg-slate-900/60 hover:bg-slate-800/80 transition-colors">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2"><Plane className="w-4 h-4 text-cyan-500" /> Flight Information</span>
-                  {expandedSections.flight ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+              <div className="border border-slate-700/50 rounded-2xl overflow-hidden bg-slate-900/40 shadow-lg">
+                <button onClick={() => toggleSection('flight')} className="w-full p-4 flex items-center justify-between bg-slate-900/80 hover:bg-slate-800/80 transition-colors group">
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2.5"><Plane className="w-4.5 h-4.5 text-cyan-500 group-hover:scale-110 transition-transform" /> Flight Information</span>
+                  {expandedSections.flight ? <ChevronDown className="w-4.5 h-4.5 text-cyan-500" /> : <ChevronRight className="w-4.5 h-4.5 text-slate-500 group-hover:text-cyan-400" />}
                 </button>
                 {expandedSections.flight && (
-                  <div className="p-3 grid grid-cols-2 gap-2 border-t border-slate-800">
+                  <div className="p-4 grid grid-cols-2 gap-3 border-t border-slate-700/50">
                     <InfoCell label="Origin Country" value={selectedAircraft.origin_country || 'Unknown'} />
                     <InfoCell label="Airline" value={routeInfo?.airline || 'Unknown'} />
                     <InfoCell label="Flight Number" value={routeInfo?.flight_number || selectedAircraft.callsign || 'Unknown'} />
@@ -635,34 +641,44 @@ export default function LiveMonitoring({ showNotification }) {
               </div>
 
               {/* ROUTE INFORMATION */}
-              <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/40">
-                <button onClick={() => toggleSection('route')} className="w-full p-3 flex items-center justify-between bg-slate-900/60 hover:bg-slate-800/80 transition-colors">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2"><MapPin className="w-4 h-4 text-emerald-500" /> Route Visualization</span>
-                  {expandedSections.route ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+              <div className="border border-slate-700/50 rounded-2xl overflow-hidden bg-slate-900/40 shadow-lg">
+                <button onClick={() => toggleSection('route')} className="w-full p-4 flex items-center justify-between bg-slate-900/80 hover:bg-slate-800/80 transition-colors group">
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2.5"><MapPin className="w-4.5 h-4.5 text-emerald-500 group-hover:scale-110 transition-transform" /> Route Visualization</span>
+                  {expandedSections.route ? <ChevronDown className="w-4.5 h-4.5 text-emerald-500" /> : <ChevronRight className="w-4.5 h-4.5 text-slate-500 group-hover:text-emerald-400" />}
                 </button>
                 {expandedSections.route && (
-                  <div className="p-3 border-t border-slate-800">
+                  <div className="p-4 border-t border-slate-700/50">
                     {!routeInfo ? (
-                       <div className="flex items-center gap-2 text-xs text-slate-500"><RefreshCw className="w-3 h-3 animate-spin"/> Resolving Flight Path...</div>
+                       <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-400 tracking-wider"><RefreshCw className="w-3.5 h-3.5 animate-spin"/> Resolving Flight Path...</div>
                     ) : routeInfo.error ? (
-                       <div className="flex items-center gap-2 text-xs text-slate-500"><AlertCircle className="w-3 h-3"/> Real route information unavailable</div>
+                       <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-400 tracking-wider"><AlertCircle className="w-3.5 h-3.5 text-amber-500"/> Route information unavailable</div>
                     ) : (
-                      <div className="flex flex-col relative pb-2">
-                        <div className="absolute left-3 top-4 bottom-4 w-0.5 bg-slate-800"></div>
-                        <div className="flex gap-4 relative mb-6">
-                          <div className="w-6 h-6 rounded-full bg-emerald-900 border-2 border-emerald-500 flex items-center justify-center text-[10px] font-bold text-emerald-400 z-10 shrink-0">O</div>
-                          <div>
-                            <div className="text-sm font-bold text-emerald-400">{routeInfo.origin_iata || routeInfo.origin_icao || 'N/A'}</div>
-                            <div className="text-[10px] text-slate-400">{routeInfo.origin_airport || 'Unknown Airport'}</div>
-                            {routeInfo.departure_time && <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1"><Clock className="w-3 h-3"/> Dep: {new Date(routeInfo.departure_time).toLocaleTimeString()}</div>}
+                      <div className="flex flex-col relative pb-3">
+                        <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gradient-to-b from-cyan-500/50 to-indigo-500/50 border-dashed border-l border-cyan-500/30"></div>
+                        
+                        <div className="flex gap-4 items-start relative z-10">
+                          <div className="w-12 h-12 rounded-xl bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center shrink-0 shadow-lg font-mono font-bold text-cyan-400">
+                            {routeInfo.origin_iata || '?'}
+                          </div>
+                          <div className="pt-1">
+                            <div className="text-[10px] text-cyan-400/80 uppercase font-mono font-bold tracking-widest">Origin</div>
+                            <div className="text-sm font-bold text-white tracking-wide">{routeInfo.origin_airport || 'Unknown Airport'}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">{routeInfo.origin_lat?.toFixed(4)}, {routeInfo.origin_lon?.toFixed(4)}</div>
                           </div>
                         </div>
-                        <div className="flex gap-4 relative">
-                          <div className="w-6 h-6 rounded-full bg-blue-900 border-2 border-blue-500 flex items-center justify-center text-[10px] font-bold text-blue-400 z-10 shrink-0">D</div>
-                          <div>
-                            <div className="text-sm font-bold text-blue-400">{routeInfo.destination_iata || routeInfo.destination_icao || 'N/A'}</div>
-                            <div className="text-[10px] text-slate-400">{routeInfo.destination_airport || 'Unknown Airport'}</div>
-                            {routeInfo.arrival_time && <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1"><Clock className="w-3 h-3"/> ETA: {new Date(routeInfo.arrival_time).toLocaleTimeString()}</div>}
+                        
+                        <div className="h-8 flex flex-col justify-center ml-[23px] my-2">
+                           <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse"></div>
+                        </div>
+                        
+                        <div className="flex gap-4 items-start relative z-10">
+                          <div className="w-12 h-12 rounded-xl bg-indigo-950/60 border border-indigo-500/40 flex items-center justify-center shrink-0 shadow-lg font-mono font-bold text-indigo-400">
+                            {routeInfo.destination_iata || '?'}
+                          </div>
+                          <div className="pt-1">
+                            <div className="text-[10px] text-indigo-400/80 uppercase font-mono font-bold tracking-widest">Destination</div>
+                            <div className="text-sm font-bold text-white tracking-wide">{routeInfo.destination_airport || 'Unknown Airport'}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">{routeInfo.destination_lat?.toFixed(4)}, {routeInfo.destination_lon?.toFixed(4)}</div>
                           </div>
                         </div>
                       </div>
@@ -671,37 +687,35 @@ export default function LiveMonitoring({ showNotification }) {
                 )}
               </div>
 
-              {/* LOCAL WEATHER */}
-              <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/40">
-                <button onClick={() => toggleSection('weather')} className="w-full p-3 flex items-center justify-between bg-slate-900/60 hover:bg-slate-800/80 transition-colors">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2"><Cloud className="w-4 h-4 text-sky-400" /> Current Weather</span>
-                  {expandedSections.weather ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+              {/* WEATHER DATA */}
+              <div className="border border-slate-700/50 rounded-2xl overflow-hidden bg-slate-900/40 shadow-lg">
+                <button onClick={() => toggleSection('weather')} className="w-full p-4 flex items-center justify-between bg-slate-900/80 hover:bg-slate-800/80 transition-colors group">
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2.5"><Thermometer className="w-4.5 h-4.5 text-amber-500 group-hover:scale-110 transition-transform" /> Atmospheric Telemetry</span>
+                  {expandedSections.weather ? <ChevronDown className="w-4.5 h-4.5 text-amber-500" /> : <ChevronRight className="w-4.5 h-4.5 text-slate-500 group-hover:text-amber-400" />}
                 </button>
                 {expandedSections.weather && (
-                  <div className="p-3 border-t border-slate-800">
+                  <div className="p-4 border-t border-slate-700/50">
                     {weather ? (
-                      <div>
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2.5 rounded-lg bg-slate-800 text-cyan-400">
-                            {getWeatherIcon(weather.weather_description)}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800/60">
+                          <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 text-amber-400">
+                            {getWeatherIcon(weather.description)}
                           </div>
                           <div>
-                            <div className="text-sm font-bold text-white capitalize">{weather.weather_description || 'Clear'}</div>
-                            <div className="text-xs text-slate-400 font-mono">Temp: {weather.temperature?.toFixed(1)}°C</div>
+                            <div className="text-xl font-bold font-heading text-white">{Math.round(weather.temperature)}°C</div>
+                            <div className="text-xs text-amber-400 font-mono font-bold capitalize tracking-wide">{weather.description}</div>
                           </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <WeatherCell icon={<Wind/>} label="Wind" value={`${weather.wind_speed?.toFixed(1)}m/s`} />
-                          <WeatherCell icon={<Compass/>} label="Wind Dir" value={`${weather.wind_direction?.toFixed(0)}°`} />
-                          <WeatherCell icon={<Activity/>} label="Pressure" value={`${weather.pressure}hPa`} />
-                          <WeatherCell icon={<Droplets/>} label="Humidity" value={`${weather.humidity}%`} />
-                          <WeatherCell icon={<Cloud/>} label="Clouds" value={`${weather.cloud_coverage}%`} />
-                          <WeatherCell icon={<CloudRain/>} label="Rain" value={`${weather.rainfall?.toFixed(1) || 0}mm`} />
+                        <div className="grid grid-cols-2 gap-3">
+                          <WeatherCell icon={<Wind />} label="Wind Speed" value={`${weather.wind_speed} m/s`} />
+                          <WeatherCell icon={<Droplets />} label="Humidity" value={`${weather.humidity}%`} />
+                          <WeatherCell icon={<Gauge />} label="Pressure" value={`${weather.pressure} hPa`} />
+                          <WeatherCell icon={<Cloud />} label="Visibility" value={`${weather.visibility} m`} />
                         </div>
                       </div>
                     ) : (
-                      <div className="h-16 flex items-center justify-center gap-2 text-slate-500 text-xs">
-                        <Cloud className="w-4 h-4 animate-pulse" /> Fetching atmospherics...
+                      <div className="h-20 flex items-center justify-center gap-2 text-slate-400 text-xs font-mono font-bold tracking-wider">
+                        <Cloud className="w-4 h-4 animate-pulse text-slate-500" /> Fetching atmospherics...
                       </div>
                     )}
                   </div>
@@ -709,134 +723,134 @@ export default function LiveMonitoring({ showNotification }) {
               </div>
 
               {/* AI PREDICTION MODEL */}
-              <div className="border border-emerald-900/50 rounded-xl overflow-hidden bg-slate-900/40 relative">
-                <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(16,185,129,0.03)_50%,transparent_75%)] bg-[length:250%_250%] animate-scan pointer-events-none"></div>
-                <button onClick={() => toggleSection('prediction')} className="w-full p-3 flex items-center justify-between bg-slate-900/60 hover:bg-slate-800/80 transition-colors">
-                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2"><Activity className="w-4 h-4" /> Machine Learning Prediction</span>
-                  {expandedSections.prediction ? <ChevronDown className="w-4 h-4 text-emerald-500" /> : <ChevronRight className="w-4 h-4 text-emerald-500" />}
+              <div className="border border-emerald-500/30 rounded-2xl overflow-hidden bg-slate-900/40 relative shadow-[0_0_15px_rgba(16,185,129,0.1)] group">
+                <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(16,185,129,0.05)_50%,transparent_75%)] bg-[length:250%_250%] animate-scan pointer-events-none"></div>
+                <button onClick={() => toggleSection('prediction')} className="w-full p-4 flex items-center justify-between bg-slate-900/80 hover:bg-slate-800/80 transition-colors">
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2.5">
+                    <Activity className="w-4.5 h-4.5 drop-shadow-[0_0_5px_rgba(16,185,129,0.6)] group-hover:animate-pulse" /> Machine Learning Prediction
+                  </span>
+                  {expandedSections.prediction ? <ChevronDown className="w-4.5 h-4.5 text-emerald-400" /> : <ChevronRight className="w-4.5 h-4.5 text-slate-500 group-hover:text-emerald-400" />}
                 </button>
                 {expandedSections.prediction && (
-                  <div className="p-3 border-t border-slate-800 relative z-10">
+                  <div className="p-4 border-t border-slate-700/50 relative z-10">
                     {predicting ? (
-                      <div className="flex flex-col items-center justify-center py-4">
-                        <RefreshCw className="w-5 h-5 text-emerald-400 animate-spin mb-2" />
-                        <div className="text-[10px] text-emerald-500 font-mono animate-pulse">Running Neural Inference...</div>
+                      <div className="flex flex-col items-center justify-center py-6">
+                        <RefreshCw className="w-6 h-6 text-emerald-400 animate-spin mb-3 drop-shadow-md" />
+                        <div className="text-[10px] text-emerald-400 font-mono font-bold tracking-widest animate-pulse">RUNNING NEURAL INFERENCE...</div>
                       </div>
                     ) : prediction && !prediction.error ? (
                       <div>
-                        <div className="text-center mb-4">
-                          <div className={`inline-block px-3 py-1.5 rounded-lg border text-xs font-mono font-bold ${getRiskColor(prediction.risk_level)}`}>
-                            {prediction.risk_level.toUpperCase()}
+                        <div className="text-center mb-5">
+                          <div className={`inline-block px-4 py-2 rounded-xl border text-[11px] font-mono font-extrabold tracking-widest uppercase shadow-lg ${getRiskColor(prediction.risk_level)}`}>
+                            {prediction.risk_level}
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-left mt-2">
-                          <div className="col-span-2 p-2 rounded bg-slate-950/50 border border-slate-800 text-center">
-                            <div className="text-[9px] text-slate-500 uppercase">Route</div>
-                            <div className="text-sm font-bold text-slate-300">
-                              {routeInfo?.origin_iata || '???'} → {routeInfo?.destination_iata || '???'}
+                        <div className="grid grid-cols-2 gap-3 text-left mt-2">
+                          <div className="col-span-2 p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 text-center shadow-inner">
+                            <div className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-widest">Route Interpolation</div>
+                            <div className="text-sm font-extrabold text-white mt-1">
+                              {routeInfo?.origin_iata || '???'} <span className="text-slate-600 mx-2">→</span> {routeInfo?.destination_iata || '???'}
                             </div>
                           </div>
                           
-                          <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
-                            <div className="text-[9px] text-slate-500 uppercase">Planned Dist.</div>
+                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Planned Dist.</div>
                             <div className="text-sm font-bold text-emerald-400">{prediction.planned_route_distance ? prediction.planned_route_distance + ' km' : 'N/A'}</div>
                           </div>
-                          <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
-                            <div className="text-[9px] text-slate-500 uppercase">Dist. Travelled</div>
+                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Dist. Travelled</div>
                             <div className="text-sm font-bold text-blue-400">{prediction.current_distance_travelled ? prediction.current_distance_travelled + ' km' : 'N/A'}</div>
                           </div>
                           
-                          <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
-                            <div className="text-[9px] text-slate-500 uppercase">Deviation Dist.</div>
-                            <div className="text-sm font-bold text-orange-400">{prediction.deviation_distance ? prediction.deviation_distance + ' km' : 'N/A'}</div>
+                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Deviation Dist.</div>
+                            <div className="text-sm font-bold text-amber-400">{prediction.deviation_distance ? prediction.deviation_distance + ' km' : 'N/A'}</div>
                           </div>
-                          <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
-                            <div className="text-[9px] text-slate-500 uppercase">Deviation %</div>
-                            <div className="text-sm font-bold text-orange-400">{prediction.deviation_percentage ? prediction.deviation_percentage + '%' : 'N/A'}</div>
+                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Deviation %</div>
+                            <div className="text-sm font-bold text-amber-400">{prediction.deviation_percentage ? prediction.deviation_percentage + '%' : 'N/A'}</div>
                           </div>
                           
-                          <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
-                            <div className="text-[9px] text-slate-500 uppercase">Weather Risk</div>
-                            <div className="text-sm font-bold text-slate-300">{prediction.weather_risk} ({prediction.weather_impact_score}%)</div>
+                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Weather Risk</div>
+                            <div className="text-sm font-bold text-slate-200">{prediction.weather_risk} <span className="text-[10px] text-slate-500 font-mono">({prediction.weather_impact_score}%)</span></div>
                           </div>
-                          <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
-                            <div className="text-[9px] text-slate-500 uppercase">Predicted Delay</div>
+                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Predicted Delay</div>
                             <div className="text-sm font-bold text-rose-400">{prediction.estimated_delay}m</div>
                           </div>
                           
-                          <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
-                            <div className="text-[9px] text-slate-500 uppercase">Overall Risk</div>
-                            <div className="text-sm font-bold text-slate-300">{prediction.overall_risk_score ? prediction.overall_risk_score + '%' : 'N/A'}</div>
+                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Overall Risk</div>
+                            <div className="text-sm font-bold text-slate-200">{prediction.overall_risk_score ? prediction.overall_risk_score + '%' : 'N/A'}</div>
                           </div>
-                          <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
-                            <div className="text-[9px] text-slate-500 uppercase">Confidence</div>
-                            <div className="text-sm font-bold text-slate-300">{prediction.confidence_score ? prediction.confidence_score + '%' : Math.round(prediction.probability * 100) + '%'}</div>
+                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Confidence</div>
+                            <div className="text-sm font-bold text-slate-200">{prediction.confidence_score ? prediction.confidence_score + '%' : Math.round(prediction.probability * 100) + '%'}</div>
                           </div>
                           
-                          <div className="col-span-2 p-2 rounded bg-slate-950/50 border border-slate-800 text-center">
-                            <div className="text-[9px] text-slate-500 uppercase">Suggested Action</div>
-                            <div className="text-xs font-bold text-cyan-400">{prediction.suggested_action || 'N/A'}</div>
+                          <div className="col-span-2 p-4 rounded-xl bg-slate-950/60 border border-slate-700/50 text-center shadow-inner mt-1">
+                            <div className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-2">Suggested Action</div>
+                            <div className="text-xs font-bold text-cyan-400 bg-cyan-500/10 inline-block px-3 py-1.5 rounded-lg border border-cyan-500/20">{prediction.suggested_action || 'N/A'}</div>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center py-4">
-                        <div className="inline-block px-3 py-1 rounded-lg bg-slate-900/40 border border-slate-700 text-slate-400 text-xs font-mono mb-2">
+                      <div className="text-center py-6 space-y-2">
+                        <div className="inline-block px-4 py-1.5 rounded-xl bg-slate-900/60 border border-slate-700 text-slate-400 text-[10px] font-mono font-bold tracking-widest shadow-inner">
                           PREDICTION FAILED
                         </div>
-                        <div className="text-[10px] text-red-400 font-mono mt-1 px-4">{prediction.message || 'Unknown error'}</div>
+                        <div className="text-[10px] text-rose-400 font-mono px-4">{prediction.message || 'Unknown error during inference'}</div>
                       </div>
                     )}
                   </div>
                 )}
               </div>
-
             </div>
           </>
         )}
       </div>
-
     </div>
   );
 }
 
 const StatItem = ({ icon, label, value }) => (
-  <div className="flex items-center gap-2">
-    <div className="text-cyan-500/70 [&>svg]:w-4 [&>svg]:h-4">{icon}</div>
+  <div className="flex items-center gap-2.5">
+    <div className="text-cyan-400 [&>svg]:w-4.5 [&>svg]:h-4.5 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">{icon}</div>
     <div>
-      <div className="text-[9px] text-slate-400 font-mono uppercase">{label}</div>
-      <div className="text-xs font-bold text-white font-mono">{value}</div>
+      <div className="text-[9px] text-slate-400 font-mono font-bold uppercase tracking-widest mb-0.5">{label}</div>
+      <div className="text-sm font-extrabold text-white font-mono tracking-wide">{value}</div>
     </div>
   </div>
 );
 
 const InfoCell = ({ label, value, highlight }) => (
-  <div className={`p-2 rounded-lg border ${highlight ? 'bg-cyan-950/20 border-cyan-900/50' : 'bg-slate-950/50 border-slate-800/60'}`}>
-    <div className="text-[9px] text-slate-500 uppercase font-mono">{label}</div>
-    <div className={`text-[11px] font-mono font-medium truncate ${highlight ? 'text-cyan-400' : 'text-slate-300'}`}>{value}</div>
+  <div className={`p-3 rounded-xl border shadow-inner transition-colors ${highlight ? 'bg-cyan-500/10 border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.05)]' : 'bg-slate-950/60 border-slate-700/50 hover:bg-slate-900/60'}`}>
+    <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">{label}</div>
+    <div className={`text-xs font-mono font-bold truncate ${highlight ? 'text-cyan-400 drop-shadow-sm' : 'text-slate-200'}`}>{value}</div>
   </div>
 );
 
 const WeatherCell = ({ icon, label, value }) => (
-  <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-slate-950/50 border border-slate-800/50">
-    <div className="text-slate-500 mb-1 [&>svg]:w-3.5 [&>svg]:h-3.5">{icon}</div>
-    <div className="text-[9px] text-slate-500 uppercase font-mono">{label}</div>
-    <div className="text-xs font-mono text-slate-200">{value}</div>
+  <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner hover:bg-slate-900/60 transition-colors">
+    <div className="text-slate-400 mb-1.5 [&>svg]:w-4 [&>svg]:h-4">{icon}</div>
+    <div className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-widest mb-1">{label}</div>
+    <div className="text-[11px] font-bold text-slate-200 font-mono">{value}</div>
   </div>
 );
 
 const getWeatherIcon = (desc) => {
   if (!desc) return <Cloud />;
   const lower = desc.toLowerCase();
-  if (lower.includes('rain')) return <CloudRain />;
-  if (lower.includes('clear')) return <Wind />;
-  return <Cloud />;
+  if (lower.includes('rain')) return <CloudRain className="text-blue-400" />;
+  if (lower.includes('clear')) return <Wind className="text-cyan-400" />;
+  return <Cloud className="text-slate-400" />;
 };
 
 const getRiskColor = (risk) => {
-  if (risk === 'Low Risk') return 'text-emerald-400 border-emerald-700 bg-emerald-900/40';
-  if (risk === 'Medium Risk') return 'text-amber-400 border-amber-700 bg-amber-900/40';
-  if (risk === 'High Risk') return 'text-orange-400 border-orange-700 bg-orange-900/40';
-  if (risk === 'Critical Risk' || risk === 'Severe Weather') return 'text-rose-400 border-rose-700 bg-rose-900/40';
-  return 'text-slate-400 border-slate-700 bg-slate-900/40';
+  if (risk === 'Low Risk') return 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.2)]';
+  if (risk === 'Medium Risk') return 'text-amber-400 border-amber-500/30 bg-amber-500/10 shadow-[0_0_15px_rgba(251,191,36,0.2)]';
+  if (risk === 'High Risk') return 'text-orange-400 border-orange-500/30 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.2)]';
+  if (risk === 'Critical Risk' || risk === 'Severe Weather') return 'text-rose-400 border-rose-500/30 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.2)] animate-pulse';
+  return 'text-slate-400 border-slate-700 bg-slate-900/60';
 };
