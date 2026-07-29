@@ -14,7 +14,9 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./airway.db")
 # check_same_thread=False allows multi-threaded request handling in FastAPI
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+    connect_args={"check_same_thread": False, "timeout": 15} if DATABASE_URL.startswith("sqlite") else {},
+    pool_size=50,
+    max_overflow=50
 )
 
 # Session factory for creating DB sessions

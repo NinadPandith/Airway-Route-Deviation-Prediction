@@ -144,6 +144,8 @@ class PredictionResponse(BaseModel):
     weather_impact_score: Optional[float] = None
     confidence_score: Optional[float] = None
     suggested_action: Optional[str] = None
+    error: bool = False
+    message: Optional[str] = None
 
 class RouteInfoResponse(BaseModel):
     callsign: str
@@ -165,3 +167,5 @@ class RouteInfoResponse(BaseModel):
     arrival_time: Optional[str] = None
     flight_status: Optional[str] = None
     cached: bool = False
+    error: bool = False
+    message: Optional[str] = None

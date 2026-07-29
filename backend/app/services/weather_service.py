@@ -1,60 +1,64 @@
-"""OpenWeatherMap integration for live weather telemetry."""
+"""Open-Meteo integration for live weather telemetry."""
 
 import logging
 import os
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 import requests
-from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 
 from .. import crud
 
 logger = logging.getLogger(__name__)
 
-load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
+OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
-OPENWEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
-
-
-def _get_api_key() -> str:
-    return os.getenv("OPENWEATHER_API_KEY", "").strip()
-
+WMO_CODES = {
+    0: "Clear sky",
+    1: "Mainly clear",
+    2: "Partly cloudy",
+    3: "Overcast",
+    45: "Fog",
+    48: "Depositing rime fog",
+    51: "Light drizzle",
+    53: "Moderate drizzle",
+    55: "Dense drizzle",
+    56: "Light freezing drizzle",
+    57: "Dense freezing drizzle",
+    61: "Slight rain",
+    63: "Moderate rain",
+    65: "Heavy rain",
+    66: "Light freezing rain",
+    67: "Heavy freezing rain",
+    71: "Slight snow",
+    73: "Moderate snow",
+    75: "Heavy snow",
+    77: "Snow grains",
+    80: "Slight rain showers",
+    81: "Moderate rain showers",
+    82: "Violent rain showers",
+    85: "Slight snow showers",
+    86: "Heavy snow showers",
+    95: "Thunderstorm",
+    96: "Thunderstorm with slight hail",
+    99: "Thunderstorm with heavy hail"
+}
 
 def _build_error_message(status_code: Optional[int], error_message: str, latitude: Optional[float], longitude: Optional[float], url: str) -> str:
     if not error_message:
         error_message = "Unknown error"
-
-    if status_code == 401 or "401" in error_message:
-        return f"OpenWeather API request failed: invalid or missing API key. Verify OPENWEATHER_API_KEY in backend/.env. Details: {error_message}"
-    if status_code == 429 or "429" in error_message:
-        return f"OpenWeather API request failed: rate limit exceeded. Details: {error_message}"
-    return f"OpenWeather API request failed: {error_message}"
+    return f"Open-Meteo API request failed: {error_message} (status: {status_code})"
 
 
 def fetch_weather_for_coordinates(latitude: Optional[float], longitude: Optional[float], retries: int = 1, timeout: int = 4) -> Tuple[Optional[Dict[str, Any]], Optional[Exception]]:
-    """Fetch current weather data for a latitude/longitude pair."""
-    api_key = _get_api_key()
-    if not api_key:
-        error = RuntimeError("OpenWeather API key not configured")
-        logger.warning(
-            "Weather API request failed | url=%s | lat=%s | lon=%s | status=%s | error=%s",
-            OPENWEATHER_BASE_URL,
-            latitude,
-            longitude,
-            None,
-            str(error),
-        )
-        return None, error
-
+    """Fetch current weather data for a latitude/longitude pair from Open-Meteo."""
     if latitude is None or longitude is None:
         error = ValueError("Latitude and longitude are required")
         logger.warning(
             "Weather API request failed | url=%s | lat=%s | lon=%s | status=%s | error=%s",
-            OPENWEATHER_BASE_URL,
+            OPEN_METEO_URL,
             latitude,
             longitude,
             None,
@@ -63,17 +67,21 @@ def fetch_weather_for_coordinates(latitude: Optional[float], longitude: Optional
         return None, error
 
     last_error: Optional[Exception] = None
-    url = f"{OPENWEATHER_BASE_URL}?lat={latitude}&lon={longitude}&appid={'*' * 8}&units=metric"
+    
+    # We fetch relevant current variables
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,cloud_cover,surface_pressure,wind_speed_10m,wind_direction_10m,visibility",
+        "wind_speed_unit": "ms"
+    }
+    
+    url = f"{OPEN_METEO_URL}?latitude={latitude}&longitude={longitude}"
     for attempt in range(retries):
         try:
             response = requests.get(
-                OPENWEATHER_BASE_URL,
-                params={
-                    "lat": latitude,
-                    "lon": longitude,
-                    "appid": api_key,
-                    "units": "metric",
-                },
+                OPEN_METEO_URL,
+                params=params,
                 timeout=timeout,
             )
             if response.status_code != 200:
@@ -90,34 +98,35 @@ def fetch_weather_for_coordinates(latitude: Optional[float], longitude: Optional
                 return None, error
 
             payload = response.json()
-            weather = (payload.get("weather") or [{}])[0]
-            main = payload.get("main") or {}
-            wind = payload.get("wind") or {}
-            clouds = payload.get("clouds") or {}
-            rain = payload.get("rain") or {}
-            rainfall = rain.get("1h")
-            if rainfall is None:
-                rainfall = rain.get("3h", 0.0)
+            current = payload.get("current", {})
+            
+            code = current.get("weather_code", 0)
+            description = WMO_CODES.get(code, "Unknown")
+            
+            # Map Open-Meteo fields to the expected dictionary
+            weather_data = {
+                "temperature": current.get("temperature_2m"),
+                "feels_like": current.get("apparent_temperature"),
+                "wind_speed": current.get("wind_speed_10m"),
+                "wind_direction": current.get("wind_direction_10m"),
+                "humidity": current.get("relative_humidity_2m"),
+                "pressure": current.get("surface_pressure"),
+                "visibility": current.get("visibility"),
+                "cloud_coverage": current.get("cloud_cover"),
+                "rainfall": current.get("precipitation"),
+                "weather_description": description,
+            }
+            
             logger.info(
                 "Weather API request succeeded | url=%s | lat=%s | lon=%s | status=%s | description=%s",
                 url,
                 latitude,
                 longitude,
                 response.status_code,
-                weather.get("description", "Unknown"),
+                description,
             )
-            return {
-                "temperature": main.get("temp"),
-                "feels_like": main.get("feels_like"),
-                "wind_speed": wind.get("speed"),
-                "wind_direction": wind.get("deg"),
-                "humidity": main.get("humidity"),
-                "pressure": main.get("pressure"),
-                "visibility": payload.get("visibility"),
-                "cloud_coverage": clouds.get("all"),
-                "rainfall": rainfall,
-                "weather_description": weather.get("description", "Unknown"),
-            }, None
+            return weather_data, None
+            
         except requests.RequestException as exc:  # pragma: no cover - network fallback path
             last_error = exc
             logger.warning(
@@ -173,7 +182,7 @@ def get_weather_for_aircraft(db: Session, icao24: str) -> Dict[str, Any]:
         str(error) if error else "Unknown weather service error",
         aircraft.latitude,
         aircraft.longitude,
-        OPENWEATHER_BASE_URL,
+        OPEN_METEO_URL,
     )
     return {
         "weather": existing_weather,

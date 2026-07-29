@@ -210,7 +210,7 @@ export default function LiveMonitoring({ showNotification }) {
     showDelayed: false,
     showHighRisk: false,
     weatherSeverity: 'All',
-    maxAircraft: '300'
+    maxAircraft: 'All'
   });
   
   const [showFilters, setShowFilters] = useState(false);
@@ -236,10 +236,7 @@ export default function LiveMonitoring({ showNotification }) {
       let newAircrafts = [];
       if (aircraftResult.status === 'fulfilled' && aircraftResult.value) {
         newAircrafts = aircraftResult.value.aircrafts || [];
-        console.log("Aircraft received:", newAircrafts.length);
-        if (newAircrafts.length > 0) {
-          console.log("First aircraft from API:", newAircrafts[0]);
-        }
+        console.log(`[DATA FLOW 4] Received by React: ${newAircrafts.length}`);
         setAircrafts(newAircrafts);
         
         setFlightPaths(prev => {
@@ -295,11 +292,11 @@ export default function LiveMonitoring({ showNotification }) {
 
   useEffect(() => {
     loadData(true);
-    const intervalId = setInterval(() => loadData(false), 15000);
+    const intervalId = setInterval(() => loadData(false), 10000);
     return () => clearInterval(intervalId);
   }, []);
 
-  const handleAircraftSelect = async (aircraft) => {
+  const handleAircraftSelect = (aircraft) => {
     setSelectedAircraft(aircraft);
     setPrediction(null);
     setRouteInfo(null);
@@ -311,35 +308,42 @@ export default function LiveMonitoring({ showNotification }) {
       setWeather(null);
     }
     
-    try {
-      const [routeResult, weatherResult, predResult] = await Promise.allSettled([
-        getLiveRoute(aircraft.callsign || aircraft.icao24, undefined),
-        !weatherCache[aircraft.icao24] ? getLiveWeather(aircraft.icao24) : Promise.resolve({ cached: true }),
-        predictRouteDeviation(aircraft.icao24)
-      ]);
-      
-      if (routeResult.status === 'fulfilled') {
-        setRouteInfo(routeResult.value);
-      } else {
-        setRouteInfo({ error: true });
-      }
-      
-      if (weatherResult.status === 'fulfilled' && weatherResult.value && !weatherResult.value.cached && weatherResult.value.weather) {
-        setWeather(weatherResult.value.weather);
-        setWeatherCache(prev => ({ ...prev, [aircraft.icao24]: weatherResult.value.weather }));
-      }
-      
-      if (predResult.status === 'fulfilled') {
-        setPrediction(predResult.value);
-      } else {
-        // Extract actual error message from Axios
-        const errMsg = predResult.reason?.response?.data?.detail || predResult.reason?.message || 'Unknown error';
+    // 1. ML Prediction (Fast)
+    predictRouteDeviation(aircraft.icao24)
+      .then(result => {
+        setPrediction(result);
+        setPredicting(false);
+      })
+      .catch(error => {
+        const errMsg = error.response?.data?.detail || error.message || 'Unknown error';
         setPrediction({ error: true, message: errMsg });
-      }
-    } catch (error) {
-      console.error("Parallel fetch failed", error);
-    } finally {
-      setPredicting(false);
+        setPredicting(false);
+      });
+
+    // 2. Route Lookup (Slower)
+    getLiveRoute(aircraft.callsign || aircraft.icao24, undefined)
+      .then(result => {
+        setRouteInfo(result);
+      })
+      .catch(() => {
+        setRouteInfo({ error: true });
+      });
+      
+    // 3. Weather Lookup (Slower)
+    if (!weatherCache[aircraft.icao24]) {
+      getLiveWeather(aircraft.icao24)
+        .then(result => {
+          if (result && result.weather) {
+            setWeather(result.weather);
+            setWeatherCache(prev => ({ ...prev, [aircraft.icao24]: result.weather }));
+          } else {
+            setWeather({ error: true });
+          }
+        })
+        .catch(error => {
+          console.error("Weather fetch failed", error);
+          setWeather({ error: true });
+        });
     }
   };
 
@@ -386,9 +390,11 @@ export default function LiveMonitoring({ showNotification }) {
       const max = parseInt(filters.maxAircraft, 10);
       result = filtered.slice(0, max);
     }
-    console.log("Aircraft after filtering:", result.length);
+    console.log(`[DATA FLOW 2] Remaining after filtering: ${result.length}`);
     return result;
   }, [aircrafts, filters]);
+
+  console.log(`[DATA FLOW 5] Markers rendered on Leaflet map: ${visibleAircrafts.length}`);
 
   if (loading && aircrafts.length === 0) {
     return (
@@ -477,8 +483,8 @@ export default function LiveMonitoring({ showNotification }) {
               </React.Fragment>
             );
           })}
-          {/* Temporarily disabled clustering for debugging */}
-          <React.Fragment>
+          {/* Re-enabled clustering for performance with large datasets */}
+          <MarkerClusterGroup chunkedLoading={true} maxClusterRadius={80}>
             {visibleAircrafts.map((ac) => (
               <AnimatedAircraftMarker 
                 key={ac.icao24}
@@ -488,7 +494,7 @@ export default function LiveMonitoring({ showNotification }) {
                 onClick={handleAircraftSelect}
               />
             ))}
-          </React.Fragment>
+          </MarkerClusterGroup>
           
         </MapContainer>
       </div>
@@ -695,7 +701,15 @@ export default function LiveMonitoring({ showNotification }) {
                 </button>
                 {expandedSections.weather && (
                   <div className="p-4 border-t border-slate-700/50">
-                    {weather ? (
+                    {weather === null ? (
+                      <div className="h-20 flex items-center justify-center gap-2 text-slate-400 text-xs font-mono font-bold tracking-wider">
+                        <Cloud className="w-4 h-4 animate-pulse text-slate-500" /> Fetching atmospherics...
+                      </div>
+                    ) : weather.error ? (
+                      <div className="h-20 flex items-center justify-center gap-2 text-amber-500 text-xs font-mono font-bold tracking-wider">
+                        <AlertTriangle className="w-4 h-4" /> Weather unavailable
+                      </div>
+                    ) : (
                       <div className="space-y-4">
                         <div className="flex items-center gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800/60">
                           <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 text-amber-400">
@@ -712,10 +726,6 @@ export default function LiveMonitoring({ showNotification }) {
                           <WeatherCell icon={<Gauge />} label="Pressure" value={`${weather.pressure} hPa`} />
                           <WeatherCell icon={<Cloud />} label="Visibility" value={`${weather.visibility} m`} />
                         </div>
-                      </div>
-                    ) : (
-                      <div className="h-20 flex items-center justify-center gap-2 text-slate-400 text-xs font-mono font-bold tracking-wider">
-                        <Cloud className="w-4 h-4 animate-pulse text-slate-500" /> Fetching atmospherics...
                       </div>
                     )}
                   </div>
@@ -746,30 +756,75 @@ export default function LiveMonitoring({ showNotification }) {
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-left mt-2">
-                          <div className="col-span-2 p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 text-center shadow-inner">
-                            <div className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-widest">Route Interpolation</div>
-                            <div className="text-sm font-extrabold text-white mt-1">
-                              {routeInfo?.origin_iata || '???'} <span className="text-slate-600 mx-2">→</span> {routeInfo?.destination_iata || '???'}
-                            </div>
-                          </div>
-                          
-                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Planned Dist.</div>
-                            <div className="text-sm font-bold text-emerald-400">{prediction.planned_route_distance ? prediction.planned_route_distance + ' km' : 'N/A'}</div>
-                          </div>
-                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Dist. Travelled</div>
-                            <div className="text-sm font-bold text-blue-400">{prediction.current_distance_travelled ? prediction.current_distance_travelled + ' km' : 'N/A'}</div>
-                          </div>
-                          
-                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Deviation Dist.</div>
-                            <div className="text-sm font-bold text-amber-400">{prediction.deviation_distance ? prediction.deviation_distance + ' km' : 'N/A'}</div>
-                          </div>
-                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Deviation %</div>
-                            <div className="text-sm font-bold text-amber-400">{prediction.deviation_percentage ? prediction.deviation_percentage + '%' : 'N/A'}</div>
-                          </div>
+                          {(() => {
+                            const hasRoute = routeInfo && !routeInfo.error && routeInfo.origin_iata;
+                            const plannedDist = prediction.planned_route_distance || 0;
+                            const travelledDist = prediction.current_distance_travelled || 0;
+                            const remainingDist = Math.max(0, plannedDist - travelledDist);
+                            const completionPct = plannedDist > 0 ? ((travelledDist / plannedDist) * 100).toFixed(1) : 0;
+                            
+                            let estimatedArrival = 'N/A';
+                            if (routeInfo?.arrival_time) {
+                              estimatedArrival = new Date(routeInfo.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            } else if (remainingDist > 0 && selectedAircraft?.velocity > 0) {
+                              const speedKmH = selectedAircraft.velocity * 1.852;
+                              const hoursRemaining = remainingDist / speedKmH;
+                              const arrivalDate = new Date(Date.now() + hoursRemaining * 3600 * 1000);
+                              estimatedArrival = arrivalDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            }
+
+                            return (
+                              <>
+                                <div className="col-span-2 p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 text-center shadow-inner">
+                                  <div className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-widest">Route Interpolation</div>
+                                  {!hasRoute ? (
+                                    <div className="text-sm font-extrabold text-amber-500 mt-1">Route information unavailable</div>
+                                  ) : (
+                                    <div className="text-sm font-extrabold text-white mt-1">
+                                      {routeInfo.origin_airport || routeInfo.origin_iata} <span className="text-slate-600 mx-2">→</span> {routeInfo.destination_airport || routeInfo.destination_iata}
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {!hasRoute ? (
+                                  <div className="col-span-2 p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 text-center shadow-inner">
+                                    <div className="text-sm font-bold text-slate-400">N/A (Route data unavailable)</div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Planned Dist.</div>
+                                      <div className="text-sm font-bold text-emerald-400">{prediction.planned_route_distance ? prediction.planned_route_distance + ' km' : 'N/A'}</div>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Dist. Travelled</div>
+                                      <div className="text-sm font-bold text-blue-400">{prediction.current_distance_travelled ? prediction.current_distance_travelled + ' km' : 'N/A'}</div>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Remaining Dist.</div>
+                                      <div className="text-sm font-bold text-indigo-400">{remainingDist > 0 ? remainingDist.toFixed(2) + ' km' : 'N/A'}</div>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Completion %</div>
+                                      <div className="text-sm font-bold text-indigo-400">{completionPct > 0 ? completionPct + '%' : 'N/A'}</div>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Deviation Dist.</div>
+                                      <div className="text-sm font-bold text-amber-400">{prediction.deviation_distance ? prediction.deviation_distance + ' km' : 'N/A'}</div>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
+                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Deviation %</div>
+                                      <div className="text-sm font-bold text-amber-400">{prediction.deviation_percentage ? prediction.deviation_percentage + '%' : 'N/A'}</div>
+                                    </div>
+                                    <div className="col-span-2 p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner text-center">
+                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Estimated Arrival</div>
+                                      <div className="text-sm font-bold text-cyan-400">{estimatedArrival}</div>
+                                    </div>
+                                  </>
+                                )}
+                              </>
+                            );
+                          })()}
                           
                           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
                             <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Weather Risk</div>

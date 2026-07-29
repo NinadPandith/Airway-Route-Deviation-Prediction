@@ -78,37 +78,24 @@ def make_prediction(icao24: str, db: Session):
     current_distance_travelled = 0.0
     deviation_distance = 0.0
     deviation_percentage = 0.0
+    
+    # Import inside function to avoid circular imports if any
+    from app.services.route_service import get_route_for_aircraft
+    from app.utils.geo import haversine, cross_track_distance
+    
+    if telemetry.callsign or telemetry.icao24:
+        route = get_route_for_aircraft(db, telemetry.callsign or telemetry.icao24)
+        if route and route.origin_lat and route.destination_lat:
+            olat, olon = route.origin_lat, route.origin_lon
+            dlat, dlon = route.destination_lat, route.destination_lon
+            clat, clon = telemetry.latitude or 0.0, telemetry.longitude or 0.0
 
-    if telemetry.callsign:
-        route = db.query(FlightRouteCache).filter(FlightRouteCache.callsign == telemetry.callsign.strip().upper()).first()
-        if route and route.origin_iata and route.destination_iata:
-            origin = airports_iata.get(route.origin_iata)
-            dest = airports_iata.get(route.destination_iata)
-            if origin and dest:
-                olat, olon = origin['lat'], origin['lon']
-                dlat, dlon = dest['lat'], dest['lon']
-                clat, clon = telemetry.latitude or 0.0, telemetry.longitude or 0.0
+            planned_route_distance = haversine(olat, olon, dlat, dlon)
+            current_distance_travelled = haversine(olat, olon, clat, clon)
+            deviation_distance = cross_track_distance(olat, olon, dlat, dlon, clat, clon)
 
-                planned_route_distance = calculate_haversine(olat, olon, dlat, dlon)
-                current_distance_travelled = calculate_haversine(olat, olon, clat, clon)
-
-                # Cross-track distance formula
-                y = np.sin(np.radians(dlon - olon)) * np.cos(np.radians(dlat))
-                x = np.cos(np.radians(olat)) * np.sin(np.radians(dlat)) - \
-                    np.sin(np.radians(olat)) * np.cos(np.radians(dlat)) * np.cos(np.radians(dlon - olon))
-                bearing12 = np.arctan2(y, x)
-
-                y2 = np.sin(np.radians(clon - olon)) * np.cos(np.radians(clat))
-                x2 = np.cos(np.radians(olat)) * np.sin(np.radians(clat)) - \
-                     np.sin(np.radians(olat)) * np.cos(np.radians(clat)) * np.cos(np.radians(clon - olon))
-                bearing13 = np.arctan2(y2, x2)
-
-                d13 = current_distance_travelled / 6371.0 # Angular distance
-                d_xt = np.arcsin(np.sin(d13) * np.sin(bearing13 - bearing12)) * 6371.0
-                deviation_distance = abs(d_xt)
-
-                if planned_route_distance > 0:
-                    deviation_percentage = (deviation_distance / planned_route_distance) * 100
+            if planned_route_distance > 0:
+                deviation_percentage = (deviation_distance / planned_route_distance) * 100
 
     wind_effect = w_spd * np.cos(np.radians(hdg - w_dir))
     weather_severity_score = (w_spd / 30.0) + ((10000 - vis) / 10000.0) + (rain / 10.0) + (cloud / 100.0)

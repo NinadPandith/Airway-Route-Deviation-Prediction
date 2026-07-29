@@ -4,7 +4,7 @@ FastAPI REST API Server for the Airway Route Deviation Prediction System.
 
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -215,15 +215,25 @@ def predict_route_deviation(
         return result
     except ValueError as e:
         logger.warning(f"Prediction failed for {request.aircraft_id}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
+        return schemas.PredictionResponse(
+            risk_level="Unknown",
+            probability=0.0,
+            estimated_delay=0,
+            weather_risk="Unknown",
+            prediction_time=datetime.now(timezone.utc).isoformat(),
+            error=True,
+            message=str(e)
         )
     except Exception as e:
         logger.error(f"Unexpected error during prediction for {request.aircraft_id}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred during prediction: {str(e)}"
+        return schemas.PredictionResponse(
+            risk_level="Unknown",
+            probability=0.0,
+            estimated_delay=0,
+            weather_risk="Unknown",
+            prediction_time=datetime.now(timezone.utc).isoformat(),
+            error=True,
+            message=f"An error occurred during prediction: {str(e)}"
         )
 
 @app.get("/api/route/{callsign}", response_model=schemas.RouteInfoResponse, tags=["Live Data"])
@@ -232,5 +242,9 @@ def get_live_route(callsign: str, db: Session = Depends(get_db)):
     from .services.route_service import get_route_for_aircraft
     route = get_route_for_aircraft(db, callsign)
     if not route:
-        raise HTTPException(status_code=404, detail="Route information unavailable")
+        return schemas.RouteInfoResponse(
+            callsign=callsign,
+            error=True,
+            message="Route information unavailable"
+        )
     return route
