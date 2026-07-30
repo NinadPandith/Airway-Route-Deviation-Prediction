@@ -192,8 +192,9 @@ def get_live_dashboard_stats(db: Session) -> dict:
 
     average_speed = round(sum((aircraft.velocity or 0.0) for aircraft in aircrafts) / len(aircrafts), 1)
     average_altitude = round(sum((aircraft.altitude or 0.0) for aircraft in aircrafts) / len(aircrafts), 1)
-    weather_rows = [get_latest_weather_for_aircraft(db, aircraft.id) for aircraft in aircrafts]
-    weather_rows = [weather for weather in weather_rows if weather is not None]
+    
+    # FIX: Fetch the most recent weather data in a single query to avoid O(N) database locks
+    weather_rows = db.query(models.WeatherTelemetry).order_by(models.WeatherTelemetry.timestamp.desc()).limit(100).all()
     average_wind_speed = round(sum((weather.wind_speed or 0.0) for weather in weather_rows) / len(weather_rows), 1) if weather_rows else 0.0
 
     if average_wind_speed >= 20:
