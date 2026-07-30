@@ -124,7 +124,8 @@ def fetch_live_aircraft_worldwide(timeout: int = 10) -> List[Dict[str, Any]]:
         if icao24:
             unique_aircraft[icao24] = ac
             
-    return list(unique_aircraft.values())
+    # Cap at 5000 to prevent client browser from hanging due to excessive markers
+    return list(unique_aircraft.values())[:5000]
 
 import threading
 _fetch_lock = threading.Lock()
