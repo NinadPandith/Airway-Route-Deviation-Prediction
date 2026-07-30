@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  labels:
+    app: airway-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: airway-frontend
+  ports:
+    - protocol: TCP
+      port: 5173
+      targetPort: 5173
