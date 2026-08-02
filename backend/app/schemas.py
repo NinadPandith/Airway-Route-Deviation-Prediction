@@ -169,3 +169,57 @@ class RouteInfoResponse(BaseModel):
     cached: bool = False
     error: bool = False
     message: Optional[str] = None
+
+class SimulationSessionCreate(BaseModel):
+    flight_id: int
+
+class SimulationSessionResponse(BaseModel):
+    id: int
+    flight_id: int
+    start_time: datetime
+    end_time: Optional[datetime]
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class SimulationTelemetryCreate(BaseModel):
+    session_id: int
+    latitude: float
+    longitude: float
+    altitude: float
+    speed: float
+    heading: float
+    weather_severity: Optional[float] = None
+    
+    # Optional fields for route distance tracking passed from frontend
+    prev_latitude: Optional[float] = None
+    prev_longitude: Optional[float] = None
+    prev_altitude: Optional[float] = None
+    prev_speed: Optional[float] = None
+    prev_heading: Optional[float] = None
+    
+    # Route info for deviation calculation
+    origin_lat: Optional[float] = None
+    origin_lon: Optional[float] = None
+    destination_lat: Optional[float] = None
+    destination_lon: Optional[float] = None
+    wind_speed: Optional[float] = 0.0
+    wind_direction: Optional[float] = 0.0
+
+class SimulationTelemetryResponse(BaseModel):
+    id: int
+    session_id: int
+    timestamp: datetime
+    latitude: float
+    longitude: float
+    altitude: float
+    speed: float
+    heading: float
+    weather_severity: Optional[float]
+    risk_level: Optional[str]
+    deviation_percentage: Optional[float]
+    confidence_score: Optional[float]
+    estimated_delay: Optional[int]
+
+    model_config = ConfigDict(from_attributes=True)
+

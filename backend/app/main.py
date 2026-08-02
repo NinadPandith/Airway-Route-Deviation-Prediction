@@ -248,3 +248,137 @@ def get_live_route(callsign: str, db: Session = Depends(get_db)):
             message="Route information unavailable"
         )
     return route
+
+# ==========================================
+# SIMULATION FLIGHTS API
+# ==========================================
+
+@app.post("/api/simulation/start", response_model=schemas.SimulationSessionResponse, tags=["Simulation"])
+def start_simulation(session_data: schemas.SimulationSessionCreate, db: Session = Depends(get_db)):
+    """Initialize a new simulation session for a flight."""
+    return crud.create_simulation_session(db, session_data.flight_id)
+
+@app.get("/api/simulation/history", response_model=List[schemas.SimulationSessionResponse], tags=["Simulation"])
+def get_simulation_history(limit: int = 50, db: Session = Depends(get_db)):
+    """Get past simulation sessions."""
+    return crud.get_simulation_sessions(db, limit)
+
+@app.get("/api/simulation/{flight_id}/route", tags=["Simulation"])
+def get_simulation_route(flight_id: int, db: Session = Depends(get_db)):
+    """Generate a route for a manual flight."""
+    flight = crud.get_flight_by_id(db, flight_id)
+    if not flight:
+        raise HTTPException(status_code=404, detail="Flight not found")
+        
+    import airportsdata
+    airports = airportsdata.load('IATA')
+    airports_icao = airportsdata.load('ICAO')
+    
+    def resolve_airport(name: str):
+        # Very basic heuristic: extract first word or 3/4 letters
+        code = name.split()[0].upper()
+        if len(code) == 3 and code in airports:
+            return airports[code]['lat'], airports[code]['lon']
+        if len(code) == 4 and code in airports_icao:
+            return airports_icao[code]['lat'], airports_icao[code]['lon']
+        # Fallback to random offset for simulation purposes if not found
+        return flight.latitude + 5.0, flight.longitude + 5.0
+
+    olat, olon = resolve_airport(flight.origin)
+    dlat, dlon = resolve_airport(flight.destination)
+    
+    # In case origin resolution failed, use the flight's exact stored lat/lon
+    olat, olon = flight.latitude, flight.longitude
+    
+    return {
+        "origin_lat": olat,
+        "origin_lon": olon,
+        "destination_lat": dlat,
+        "destination_lon": dlon
+    }
+
+@app.get("/api/simulation/{session_id}/replay", response_model=List[schemas.SimulationTelemetryResponse], tags=["Simulation"])
+def replay_simulation(session_id: int, db: Session = Depends(get_db)):
+    """Get all telemetry points for a specific session for replay."""
+    return crud.get_simulation_telemetry(db, session_id)
+
+@app.post("/api/simulation/telemetry", response_model=schemas.SimulationTelemetryResponse, tags=["Simulation"])
+def record_simulation_telemetry(telemetry: schemas.SimulationTelemetryCreate, db: Session = Depends(get_db)):
+    """
+    Record a simulated telemetry point, calculate deviation, and run ML prediction.
+    Returns the prediction and saves it to history.
+    """
+    # 1. Prepare ML Features
+    from app.utils.geo import haversine, cross_track_distance
+    from app.ml.predict import make_prediction_from_payload
+    import numpy as np
+    
+    # Calculate route geometry
+    planned_route_distance = 0.0
+    current_distance_travelled = 0.0
+    deviation_distance = 0.0
+    deviation_percentage = 0.0
+    
+    clat, clon = telemetry.latitude, telemetry.longitude
+    olat, olon = telemetry.origin_lat, telemetry.origin_lon
+    dlat, dlon = telemetry.destination_lat, telemetry.destination_lon
+    
+    if olat is not None and olon is not None and dlat is not None and dlon is not None:
+        planned_route_distance = haversine(olat, olon, dlat, dlon)
+        current_distance_travelled = haversine(olat, olon, clat, clon)
+        deviation_distance = cross_track_distance(olat, olon, dlat, dlon, clat, clon)
+        if planned_route_distance > 0:
+            deviation_percentage = (deviation_distance / planned_route_distance) * 100
+
+    # Calculate change features based on previous telemetry provided by frontend
+    alt_change = telemetry.altitude - (telemetry.prev_altitude or telemetry.altitude)
+    spd_change = telemetry.speed - (telemetry.prev_speed or telemetry.speed)
+    hdg_change = telemetry.heading - (telemetry.prev_heading or telemetry.heading)
+    route_dist = 0.0
+    if telemetry.prev_latitude and telemetry.prev_longitude:
+        route_dist = haversine(telemetry.prev_latitude, telemetry.prev_longitude, clat, clon)
+
+    wind_effect = telemetry.wind_speed * np.cos(np.radians(telemetry.heading - telemetry.wind_direction))
+    
+    weather_sev = telemetry.weather_severity or 0.0
+
+    features = [
+        telemetry.altitude, telemetry.speed, telemetry.heading, telemetry.wind_speed, 15.0, 1013.25, 50.0, 10000.0,
+        alt_change, spd_change, hdg_change, wind_effect, route_dist, weather_sev,
+        deviation_distance, deviation_percentage
+    ]
+    
+    payload = {
+        "icao24": f"SIM-{telemetry.session_id}",
+        "features": features,
+        "planned_route_distance": planned_route_distance,
+        "current_distance_travelled": current_distance_travelled,
+        "deviation_distance": deviation_distance,
+        "deviation_percentage": deviation_percentage,
+        "weather_severity_score": weather_sev
+    }
+    
+    # 2. Run Prediction
+    try:
+        prediction = make_prediction_from_payload(payload)
+    except Exception as e:
+        logger.error(f"Simulation ML error: {e}")
+        prediction = {}
+    
+    # 3. Save to Database
+    db_data = {
+        "session_id": telemetry.session_id,
+        "latitude": telemetry.latitude,
+        "longitude": telemetry.longitude,
+        "altitude": telemetry.altitude,
+        "speed": telemetry.speed,
+        "heading": telemetry.heading,
+        "weather_severity": weather_sev,
+        "risk_level": prediction.get("risk_level", "Unknown"),
+        "deviation_percentage": deviation_percentage,
+        "confidence_score": prediction.get("confidence_score", 0.0),
+        "estimated_delay": prediction.get("estimated_delay", 0)
+    }
+    
+    saved_telemetry = crud.create_simulation_telemetry(db, db_data)
+    return saved_telemetry

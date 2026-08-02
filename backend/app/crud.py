@@ -224,3 +224,23 @@ def get_live_dashboard_stats(db: Session) -> dict:
 def get_history(db: Session, limit: int = 100) -> List[models.AircraftTelemetry]:
     """Return historical aircraft telemetry records."""
     return db.query(models.AircraftTelemetry).order_by(models.AircraftTelemetry.timestamp.desc()).limit(limit).all()
+def create_simulation_session(db: Session, flight_id: int) -> models.SimulationSession:
+    session = models.SimulationSession(flight_id=flight_id)
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session
+
+def get_simulation_sessions(db: Session, limit: int = 50) -> List[models.SimulationSession]:
+    return db.query(models.SimulationSession).order_by(models.SimulationSession.start_time.desc()).limit(limit).all()
+
+def get_simulation_telemetry(db: Session, session_id: int) -> List[models.SimulationTelemetry]:
+    return db.query(models.SimulationTelemetry).filter(models.SimulationTelemetry.session_id == session_id).order_by(models.SimulationTelemetry.timestamp.asc()).all()
+
+def create_simulation_telemetry(db: Session, data: dict) -> models.SimulationTelemetry:
+    telemetry = models.SimulationTelemetry(**data)
+    db.add(telemetry)
+    db.commit()
+    db.refresh(telemetry)
+    return telemetry
+

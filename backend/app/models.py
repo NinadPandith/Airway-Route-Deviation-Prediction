@@ -89,3 +89,43 @@ class FlightRouteCache(Base):
     arrival_time = Column(String(50), nullable=True)
     flight_status = Column(String(50), nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+class SimulationSession(Base):
+    """Tracks a single simulation run for a manually created flight."""
+    __tablename__ = "simulation_sessions"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    flight_id = Column(Integer, ForeignKey("flights.id"), nullable=False)
+    start_time = Column(DateTime, default=datetime.utcnow, nullable=False)
+    end_time = Column(DateTime, nullable=True)
+    status = Column(String(50), nullable=False, default="running") # running, completed, aborted
+
+    flight = relationship("Flight")
+    telemetry = relationship("SimulationTelemetry", back_populates="session", cascade="all, delete-orphan")
+
+
+class SimulationTelemetry(Base):
+    """Stores the time-series state of the simulated aircraft for replay."""
+    __tablename__ = "simulation_telemetry"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    session_id = Column(Integer, ForeignKey("simulation_sessions.id"), nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Aircraft State
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    altitude = Column(Float, nullable=False)
+    speed = Column(Float, nullable=False)
+    heading = Column(Float, nullable=False)
+    
+    # Weather State
+    weather_severity = Column(Float, nullable=True)
+    
+    # ML Predictions
+    risk_level = Column(String(50), nullable=True)
+    deviation_percentage = Column(Float, nullable=True)
+    confidence_score = Column(Float, nullable=True)
+    estimated_delay = Column(Integer, nullable=True)
+
+    session = relationship("SimulationSession", back_populates="telemetry")

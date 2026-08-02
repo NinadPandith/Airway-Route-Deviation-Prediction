@@ -110,26 +110,45 @@ def make_prediction(icao24: str, db: Session):
     # 'visibility', 'altitude_change', 'speed_change', 'heading_change', 'wind_effect', 
     # 'route_distance', 'weather_severity_score', 'deviation_distance', 'deviation_percentage']
 
-    features = [
-        alt, spd, hdg, w_spd, temp, press, hum, vis,
-        alt_change, spd_change, hdg_change, wind_effect, route_dist, weather_severity_score,
-        deviation_distance, deviation_percentage
-    ]
+    payload = {
+        "icao24": icao24,
+        "features": [
+            alt, spd, hdg, w_spd, temp, press, hum, vis,
+            alt_change, spd_change, hdg_change, wind_effect, route_dist, weather_severity_score,
+            deviation_distance, deviation_percentage
+        ],
+        "planned_route_distance": planned_route_distance,
+        "current_distance_travelled": current_distance_travelled,
+        "deviation_distance": deviation_distance,
+        "deviation_percentage": deviation_percentage,
+        "weather_severity_score": weather_severity_score
+    }
+    return make_prediction_from_payload(payload)
 
-    # Reshape for sklearn (1 sample, n features)
-    features_array = np.array(features).reshape(1, -1)
+def make_prediction_from_payload(payload: dict):
+    """
+    Takes a payload dictionary containing model features and precalculated metrics,
+    runs the Scikit-Learn model inference, and returns a formatted PredictionResponse dict.
+    """
+    features_array = np.array(payload["features"]).reshape(1, -1)
+    icao24 = payload.get("icao24", "SIMULATED")
+    
+    deviation_percentage = payload.get("deviation_percentage", 0.0)
+    weather_severity_score = payload.get("weather_severity_score", 0.0)
+    planned_route_distance = payload.get("planned_route_distance", 0.0)
+    current_distance_travelled = payload.get("current_distance_travelled", 0.0)
+    deviation_distance = payload.get("deviation_distance", 0.0)
 
-    # 4. Load model and scaler
+    # Load model and scaler
     model = get_model()
     scaler = get_scaler()
 
-    # 5. Predict
+    # Predict
     try:
         scaled_features = scaler.transform(features_array)
         prediction = model.predict(scaled_features)[0]
         probabilities = model.predict_proba(scaled_features)[0]
     except Exception as e:
-        # Fallback if something goes wrong with shapes or model execution
         logger.warning(f"Prediction fallback for {icao24}: {e}")
         prediction = 0
         probabilities = [1.0, 0.0, 0.0]
@@ -146,8 +165,7 @@ def make_prediction(icao24: str, db: Session):
     prob = float(np.max(probabilities))
     confidence_score = prob * 100.0
     
-    # Calculate estimated delay (heuristic continuous formula)
-    # High risk contributes ~45 mins, Medium risk contributes ~15 mins, plus deviation scaling
+    # Calculate estimated delay
     estimated_delay = int(round((prob_high * 45) + (prob_medium * 15) + (deviation_percentage * 2.5)))
 
     # Weather Risk descriptive
@@ -158,7 +176,6 @@ def make_prediction(icao24: str, db: Session):
     else:
         weather_risk = "Clear"
         
-    # Calculate a more accurate overall risk score (0-100)
     risk_prob_score = (prob_high * 100) + (prob_medium * 50)
     overall_risk_score = min(risk_prob_score + (deviation_percentage * 2) + (weather_severity_score * 20), 100.0)
     

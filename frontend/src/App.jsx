@@ -9,11 +9,14 @@ import ViewFlights from './pages/ViewFlights';
 import AddFlight from './pages/AddFlight';
 import EditFlight from './pages/EditFlight';
 import LiveMonitoring from './pages/LiveMonitoring';
+import SimulationMode from './pages/SimulationMode';
+
 
 export default function App() {
   const [toast, setToast] = useState({ type: 'success', message: '' });
   const location = useLocation();
-  const isLiveMonitoring = location.pathname === '/live-monitoring';
+  const isLiveMonitoring = location.pathname === '/live-monitoring' || location.pathname === '/simulation';
+
 
   const showNotification = (type, message) => {
     setToast({ type, message });
@@ -41,6 +44,7 @@ export default function App() {
             <Route path="/add-flight" element={<AddFlight showNotification={showNotification} />} />
             <Route path="/edit-flight/:id" element={<EditFlight showNotification={showNotification} />} />
             <Route path="/live-monitoring" element={<LiveMonitoring showNotification={showNotification} />} />
+            <Route path="/simulation" element={<SimulationMode showNotification={showNotification} />} />
           </Routes>
         </main>
       </div>

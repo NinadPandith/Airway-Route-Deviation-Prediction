@@ -28,6 +28,12 @@ export default function Sidebar() {
       icon: Activity,
       badge: 'Live',
     },
+    {
+      label: 'Flight Simulator',
+      path: '/simulation',
+      icon: PlaneTakeoff,
+      badge: 'Sim',
+    },
   ];
 
   return (
