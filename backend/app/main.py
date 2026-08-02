@@ -274,21 +274,36 @@ def get_simulation_route(flight_id: int, db: Session = Depends(get_db)):
     airports = airportsdata.load('IATA')
     airports_icao = airportsdata.load('ICAO')
     
-    def resolve_airport(name: str):
-        # Very basic heuristic: extract first word or 3/4 letters
-        code = name.split()[0].upper()
-        if len(code) == 3 and code in airports:
-            return airports[code]['lat'], airports[code]['lon']
-        if len(code) == 4 and code in airports_icao:
-            return airports_icao[code]['lat'], airports_icao[code]['lon']
-        # Fallback to random offset for simulation purposes if not found
-        return flight.latitude + 5.0, flight.longitude + 5.0
-
-    olat, olon = resolve_airport(flight.origin)
-    dlat, dlon = resolve_airport(flight.destination)
+    import re
     
-    # In case origin resolution failed, use the flight's exact stored lat/lon
-    olat, olon = flight.latitude, flight.longitude
+    def resolve_airport(name: str):
+        # Extract 3-letter (IATA) or 4-letter (ICAO) codes using regex
+        matches = re.findall(r'\b[A-Z]{3,4}\b', name.upper())
+        for code in matches:
+            if len(code) == 3 and code in airports:
+                return airports[code]['lat'], airports[code]['lon']
+            if len(code) == 4 and code in airports_icao:
+                return airports_icao[code]['lat'], airports_icao[code]['lon']
+                
+        # If regex fails, try checking the whole string just in case
+        clean_name = name.strip().upper()
+        if len(clean_name) == 3 and clean_name in airports:
+            return airports[clean_name]['lat'], airports[clean_name]['lon']
+        if len(clean_name) == 4 and clean_name in airports_icao:
+            return airports_icao[clean_name]['lat'], airports_icao[clean_name]['lon']
+
+        # Fallback to the flight's provided coordinates if we absolutely cannot find the origin,
+        # but for destination, just use an offset.
+        return None
+
+    olat_olon = resolve_airport(flight.origin)
+    dlat_dlon = resolve_airport(flight.destination)
+    
+    olat = olat_olon[0] if olat_olon else flight.latitude
+    olon = olat_olon[1] if olat_olon else flight.longitude
+    
+    dlat = dlat_dlon[0] if dlat_dlon else flight.latitude + 5.0
+    dlon = dlat_dlon[1] if dlat_dlon else flight.longitude + 5.0
     
     return {
         "origin_lat": olat,
