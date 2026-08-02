@@ -60,7 +60,7 @@ export const SimulationProvider = ({ children }) => {
   
   // Dynamic Entities
   const [simAircraft, setSimAircraft] = useState(null);
-  const [destination, setDestination] = useState(null);
+  const [destination, setDestination] = useState(null); // Now holds the complex weather route payload
   const [prediction, setPrediction] = useState(null);
   const [history, setHistory] = useState([]); 
   
@@ -77,7 +77,12 @@ export const SimulationProvider = ({ children }) => {
     maxDev: 0,
     maxAlt: 0,
     avgSpeedSum: 0,
-    speedCount: 0
+    speedCount: 0,
+    weatherZonesCrossed: 0,
+    weatherImpactScore: 0,
+    weatherDelaySecs: 0,
+    maxWind: 0,
+    worstWeather: 'Clear'
   });
 
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -120,7 +125,7 @@ export const SimulationProvider = ({ children }) => {
           setPrediction(parsed.prediction);
           setHistory(parsed.history || []);
           setProgressData(parsed.progressData);
-          setAnalytics(parsed.analytics);
+          setAnalytics(parsed.analytics || { maxDev: 0, maxAlt: 0, avgSpeedSum: 0, speedCount: 0, weatherZonesCrossed: 0, weatherImpactScore: 0, weatherDelaySecs: 0, maxWind: 0, worstWeather: 'Clear' });
           setTimeElapsed(parsed.timeElapsed || 0);
         }
       } catch (e) {
@@ -161,29 +166,37 @@ export const SimulationProvider = ({ children }) => {
       const sess = await res.json();
       setSession(sess);
       
-      const routeRes = await fetch(`${API_BASE_URL}/api/simulation/${flight.id}/route`);
+      const routeRes = await fetch(`${API_BASE_URL}/api/simulation/${flight.id}/weather-route`);
       const routeData = await routeRes.json();
       setDestination(routeData);
       destRef.current = routeData;
       
-      const totalDist = haversine(routeData.origin_lat, routeData.origin_lon, routeData.destination_lat, routeData.destination_lon);
+      // Calculate total segmented distance
+      let totalDist = 0;
+      const optRoute = routeData.optimized_route;
+      for (let i = 0; i < optRoute.length - 1; i++) {
+        totalDist += haversine(optRoute[i].lat, optRoute[i].lon, optRoute[i+1].lat, optRoute[i+1].lon);
+      }
       
+      const initialWeather = optRoute[0].weather || {};
+
       const initialAircraft = {
         latitude: routeData.origin_lat,
         longitude: routeData.origin_lon,
         altitude: 0,
         vertical_speed: 0,
         speed: 150,
-        heading: calculateBearing(routeData.origin_lat, routeData.origin_lon, routeData.destination_lat, routeData.destination_lon),
-        wind_speed: 15 + Math.random() * 10,
-        wind_direction: Math.random() * 360,
-        weather_severity: 0.1 + Math.random() * 0.2,
-        temperature: 15 + Math.random() * 10,
-        pressure: 1013,
-        visibility: 10000,
+        heading: calculateBearing(routeData.origin_lat, routeData.origin_lon, optRoute[1].lat, optRoute[1].lon),
+        wind_speed: initialWeather.wind_speed || 0,
+        wind_direction: initialWeather.wind_direction || 0,
+        weather_severity: (initialWeather.weather_code || 0) / 100.0,
+        temperature: initialWeather.temperature || 15,
+        pressure: initialWeather.pressure || 1013,
+        visibility: initialWeather.visibility || 10000,
         phase: 'Taxi',
         prev_latitude: routeData.origin_lat,
         prev_longitude: routeData.origin_lon,
+        currentWaypointIndex: 0
       };
       
       setSimAircraft(initialAircraft);
@@ -199,7 +212,17 @@ export const SimulationProvider = ({ children }) => {
         progressPercent: 0,
         etaMinutes: 0
       });
-      setAnalytics({ maxDev: 0, maxAlt: 0, avgSpeedSum: 0, speedCount: 0 });
+      setAnalytics({ 
+        maxDev: 0, 
+        maxAlt: 0, 
+        avgSpeedSum: 0, 
+        speedCount: 0,
+        weatherZonesCrossed: 1,
+        weatherImpactScore: 0,
+        weatherDelaySecs: 0,
+        maxWind: initialWeather.wind_speed || 0,
+        worstWeather: initialWeather.weather_description || 'Clear'
+      });
     } catch (e) {
       console.error('Failed to start session', e);
     }
@@ -234,20 +257,47 @@ export const SimulationProvider = ({ children }) => {
       
       const current = simStateRef.current;
       const dest = destRef.current;
+      const optRoute = dest.optimized_route;
       
-      const totalDist = haversine(dest.origin_lat, dest.origin_lon, dest.destination_lat, dest.destination_lon);
-      const distCovered = haversine(dest.origin_lat, dest.origin_lon, current.latitude, current.longitude);
-      const distRemaining = haversine(current.latitude, current.longitude, dest.destination_lat, dest.destination_lon);
+      // Calculate total segment distance dynamically based on index
+      let distCovered = 0;
+      for (let i = 0; i < current.currentWaypointIndex; i++) {
+        distCovered += haversine(optRoute[i].lat, optRoute[i].lon, optRoute[i+1].lat, optRoute[i+1].lon);
+      }
+      const distFromLastWp = haversine(optRoute[current.currentWaypointIndex].lat, optRoute[current.currentWaypointIndex].lon, current.latitude, current.longitude);
+      distCovered += distFromLastWp;
+
+      let totalDist = 0;
+      for (let i = 0; i < optRoute.length - 1; i++) {
+        totalDist += haversine(optRoute[i].lat, optRoute[i].lon, optRoute[i+1].lat, optRoute[i+1].lon);
+      }
+      
+      const distRemaining = totalDist - distCovered;
       const progress = (distCovered / totalDist) * 100;
       
-      if (progress >= 99.8 || distRemaining < 2) {
+      if (progress >= 99.8 || current.currentWaypointIndex >= optRoute.length - 1 || distRemaining < 2) {
         setStatus('completed');
         return;
       }
 
+      // Check if we reached the next waypoint
+      let targetWp = optRoute[current.currentWaypointIndex + 1];
+      const distToTarget = haversine(current.latitude, current.longitude, targetWp.lat, targetWp.lon);
+      
+      let nextWpIdx = current.currentWaypointIndex;
+      let weatherZonesCrossedDelta = 0;
+      if (distToTarget < 5.0 && current.currentWaypointIndex < optRoute.length - 2) {
+        nextWpIdx++;
+        targetWp = optRoute[nextWpIdx + 1];
+        weatherZonesCrossedDelta = 1;
+      }
+
+      // Current Weather Extraction
+      const activeWeather = optRoute[nextWpIdx].weather || {};
+
       let phase = 'Taxi';
       let targetAlt = 35000;
-      let targetSpeed = 450;
+      let targetSpeed = 450; // base speed
       let targetVs = 0;
 
       if (progress < 1) {
@@ -277,9 +327,41 @@ export const SimulationProvider = ({ children }) => {
         targetVs = -500;
       }
 
+      // ----------------------------------------------------
+      // Weather Impact on Physics
+      // ----------------------------------------------------
+      const windSpd = activeWeather.wind_speed || 0; // m/s
+      const windDir = activeWeather.wind_direction || 0; // deg
+      const idealHeading = calculateBearing(current.latitude, current.longitude, targetWp.lat, targetWp.lon);
+      
+      // Calculate wind tail/head vector
+      // 0 = tailwind (adds to speed), 180 = headwind (reduces speed)
+      const relativeWindAngle = Math.abs(windDir - idealHeading) % 360;
+      const windEffectFactor = Math.cos(toRad(relativeWindAngle)); 
+      
+      // Convert wind m/s to knots for speed adjustment (1 m/s = 1.94384 knots)
+      const windKnots = windSpd * 1.94384;
+      
+      // Adjust target speed based on wind
+      // Tailwind pushes, Headwind resists
+      targetSpeed += (windKnots * windEffectFactor);
+      
+      // Severe weather code reduces target speed
+      const wcode = activeWeather.weather_code || 0;
+      let weatherDelayDelta = 0;
+      if (wcode >= 95) { // thunderstorm
+          targetSpeed -= 50; 
+          weatherDelayDelta = simTimeDelta * 0.2; // 20% delay penalty
+      } else if (wcode >= 61) { // rain
+          targetSpeed -= 20;
+          weatherDelayDelta = simTimeDelta * 0.05;
+      }
+
+      // Smooth altitude transitions
       const altDiff = targetAlt - current.altitude;
       const newAlt = Math.max(0, current.altitude + (altDiff > 0 ? 1 : -1) * Math.min(Math.abs(altDiff), 50 * simTimeDelta));
       
+      // Smooth speed transitions
       const speedDiff = targetSpeed - current.speed;
       const newSpeed = current.speed + (speedDiff > 0 ? 1 : -1) * Math.min(Math.abs(speedDiff), 2 * simTimeDelta);
 
@@ -288,17 +370,16 @@ export const SimulationProvider = ({ children }) => {
       const distanceMovedKm = speedKmS * simTimeDelta;
       
       const distDeg = distanceMovedKm / 111.0;
-      const idealHeading = calculateBearing(current.latitude, current.longitude, dest.destination_lat, dest.destination_lon);
       
-      const deviationAmt = (Math.random() - 0.5) * 1.5; 
+      // Deviation flutter depending on weather severity
+      const wSev = wcode >= 95 ? 3.0 : (wcode >= 61 ? 1.0 : 0.0);
+      const deviationAmt = (Math.random() - 0.5) * (1.5 + wSev); 
       const newHeading = (idealHeading + deviationAmt + 360) % 360;
       const headingRad = toRad(newHeading);
       
       const newLat = current.latitude + distDeg * Math.cos(headingRad);
       const newLon = current.longitude + distDeg * Math.sin(headingRad);
       
-      const newTemp = current.temperature + (Math.random() - 0.5) * 0.1 * simTimeDelta;
-
       const updated = {
         ...current,
         latitude: newLat,
@@ -310,7 +391,13 @@ export const SimulationProvider = ({ children }) => {
         phase: phase,
         prev_latitude: current.latitude,
         prev_longitude: current.longitude,
-        temperature: newTemp
+        currentWaypointIndex: nextWpIdx,
+        
+        // Update current weather payload for UI
+        temperature: activeWeather.temperature || current.temperature,
+        wind_speed: windSpd,
+        wind_direction: windDir,
+        weather_severity: (wcode / 100.0) + (windSpd / 50.0) // Custom severity score for ML
       };
       
       simStateRef.current = updated;
@@ -325,12 +412,29 @@ export const SimulationProvider = ({ children }) => {
         etaMinutes: speedKmH > 0 ? (distRemaining / speedKmH) * 60 : 0
       });
 
-      setAnalytics(prev => ({
-        maxAlt: Math.max(prev.maxAlt, newAlt),
-        avgSpeedSum: prev.avgSpeedSum + newSpeed,
-        speedCount: prev.speedCount + 1,
-        maxDev: prev.maxDev
-      }));
+      setAnalytics(prev => {
+        let worst = prev.worstWeather;
+        let impactScore = prev.weatherImpactScore;
+        const currentDesc = activeWeather.weather_description || 'Clear';
+        if (wcode > 0 && wcode > (prev._lastCode || 0)) {
+           worst = currentDesc;
+        }
+        
+        impactScore += (wcode / 100.0) * simTimeDelta;
+
+        return {
+          maxAlt: Math.max(prev.maxAlt, newAlt),
+          avgSpeedSum: prev.avgSpeedSum + newSpeed,
+          speedCount: prev.speedCount + 1,
+          maxDev: prev.maxDev, // updated in telemetry fetch
+          weatherZonesCrossed: prev.weatherZonesCrossed + weatherZonesCrossedDelta,
+          weatherDelaySecs: prev.weatherDelaySecs + weatherDelayDelta,
+          maxWind: Math.max(prev.maxWind, windSpd),
+          worstWeather: worst,
+          weatherImpactScore: impactScore,
+          _lastCode: wcode
+        };
+      });
     }
     
     lastTimeRef.current = time;
@@ -343,14 +447,13 @@ export const SimulationProvider = ({ children }) => {
       requestRef.current = requestAnimationFrame(updateSimulation);
     }
     return () => cancelAnimationFrame(requestRef.current);
-  }, [status]); // Note: removed speedMult so it doesn't constantly restart the loop when speed changes, speedRef handles it.
+  }, [status]);
   
   // Telemetry POST (capped at 1s real-time to avoid spam at 1000x)
   useEffect(() => {
     if (status !== 'playing' || !simAircraft || !session || !destination) return;
     
     const interval = setInterval(() => {
-      // Use the ref for the most up-to-date state inside interval
       const current = simStateRef.current;
       if(!current) return;
       
@@ -404,7 +507,7 @@ export const SimulationProvider = ({ children }) => {
       startSession,
       stopSession,
       simAircraft,
-      destination,
+      destination, // Contains optimized_route, original_route, weather_markers
       prediction,
       history,
       progressData,

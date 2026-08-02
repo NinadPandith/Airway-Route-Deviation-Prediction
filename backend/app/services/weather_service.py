@@ -155,6 +155,74 @@ def fetch_weather_for_coordinates(latitude: Optional[float], longitude: Optional
     return None, last_error
 
 
+def fetch_weather_array(lats: list[float], lons: list[float], retries: int = 1, timeout: int = 5) -> Tuple[Optional[list[Dict[str, Any]]], Optional[Exception]]:
+    """Fetch current weather data for multiple coordinates from Open-Meteo simultaneously."""
+    if not lats or not lons or len(lats) != len(lons):
+        return None, ValueError("Latitudes and longitudes must be provided and have the same length")
+
+    lat_str = ",".join([str(lat) for lat in lats])
+    lon_str = ",".join([str(lon) for lon in lons])
+
+    params = {
+        "latitude": lat_str,
+        "longitude": lon_str,
+        "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,cloud_cover,surface_pressure,wind_speed_10m,wind_direction_10m,visibility",
+        "wind_speed_unit": "ms"
+    }
+
+    url = f"{OPEN_METEO_URL}?latitude={lat_str}&longitude={lon_str}"
+    last_error: Optional[Exception] = None
+
+    for attempt in range(retries):
+        try:
+            response = requests.get(
+                OPEN_METEO_URL,
+                params=params,
+                timeout=timeout,
+            )
+            if response.status_code != 200:
+                error = RuntimeError(response.text[:500] or f"HTTP {response.status_code}")
+                return None, error
+
+            payload = response.json()
+            # If only 1 point was requested, open-meteo returns a single dict instead of a list
+            if isinstance(payload, dict) and "current" in payload:
+                payload = [payload]
+                
+            results = []
+            for item in payload:
+                current = item.get("current", {})
+                code = current.get("weather_code", 0)
+                description = WMO_CODES.get(code, "Unknown")
+                
+                results.append({
+                    "temperature": current.get("temperature_2m"),
+                    "feels_like": current.get("apparent_temperature"),
+                    "wind_speed": current.get("wind_speed_10m"),
+                    "wind_direction": current.get("wind_direction_10m"),
+                    "humidity": current.get("relative_humidity_2m"),
+                    "pressure": current.get("surface_pressure"),
+                    "visibility": current.get("visibility"),
+                    "cloud_coverage": current.get("cloud_cover"),
+                    "rainfall": current.get("precipitation"),
+                    "weather_description": description,
+                    "weather_code": code
+                })
+                
+            return results, None
+            
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt < retries - 1:
+                time.sleep(1.5 * (attempt + 1))
+        except Exception as exc:
+            last_error = exc
+            if attempt < retries - 1:
+                time.sleep(1.5 * (attempt + 1))
+
+    return None, last_error
+
+
 def get_weather_for_aircraft(db: Session, icao24: str) -> Dict[str, Any]:
     """Fetch weather for an aircraft and persist the latest result."""
     aircraft = crud.get_aircraft_telemetry_by_icao24(db, icao24)

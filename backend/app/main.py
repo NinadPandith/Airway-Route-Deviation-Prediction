@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from .database import engine, Base, get_db, init_db
 from . import crud, schemas
 from .services.opensky_service import collect_live_aircraft
-from .services.weather_service import get_weather_for_aircraft
+from .services.weather_service import get_weather_for_aircraft, fetch_weather_array
 from .ml.predict import make_prediction
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
@@ -299,17 +299,153 @@ def get_simulation_route(flight_id: int, db: Session = Depends(get_db)):
     olat_olon = resolve_airport(flight.origin)
     dlat_dlon = resolve_airport(flight.destination)
     
-    olat = olat_olon[0] if olat_olon else flight.latitude
-    olon = olat_olon[1] if olat_olon else flight.longitude
+    origin_lat, origin_lon = olat_olon
+    dest_lat, dest_lon = dlat_dlon
     
-    dlat = dlat_dlon[0] if dlat_dlon else flight.latitude + 5.0
-    dlon = dlat_dlon[1] if dlat_dlon else flight.longitude + 5.0
+    # Fallback to provided coordinates if lookup fails
+    route = {
+        "origin_lat": origin_lat or flight.origin_latitude or 0.0,
+        "origin_lon": origin_lon or flight.origin_longitude or 0.0,
+        "destination_lat": dest_lat or flight.destination_latitude or 0.0,
+        "destination_lon": dest_lon or flight.destination_longitude or 0.0,
+    }
     
+    return route
+
+
+@app.get("/api/simulation/{flight_id}/weather-route", tags=["Simulation"])
+def get_weather_aware_route(flight_id: int, db: Session = Depends(get_db)):
+    """Generate a weather-aware route for a manual flight with intermediate waypoints."""
+    flight = crud.get_flight_by_id(db, flight_id)
+    if not flight:
+        raise HTTPException(status_code=404, detail="Flight not found")
+        
+    import airportsdata
+    import re
+    import math
+    from app.services.weather_service import fetch_weather_array
+    
+    airports = airportsdata.load('IATA')
+    airports_icao = airportsdata.load('ICAO')
+    
+    def resolve_airport(name: str):
+        matches = re.findall(r'\b[A-Z]{3,4}\b', name.upper())
+        for code in matches:
+            if len(code) == 3 and code in airports:
+                return airports[code]['lat'], airports[code]['lon']
+            if len(code) == 4 and code in airports_icao:
+                return airports_icao[code]['lat'], airports_icao[code]['lon']
+        return None, None
+
+    o_lat, o_lon = resolve_airport(flight.origin)
+    d_lat, d_lon = resolve_airport(flight.destination)
+    
+    start_lat = o_lat or flight.origin_latitude or 0.0
+    start_lon = o_lon or flight.origin_longitude or 0.0
+    end_lat = d_lat or flight.destination_latitude or 0.0
+    end_lon = d_lon or flight.destination_longitude or 0.0
+
+    # Calculate great-circle distance to determine number of waypoints
+    def to_rad(deg): return deg * math.pi / 180.0
+    def to_deg(rad): return rad * 180.0 / math.pi
+    
+    R = 6371
+    d_lat_rad = to_rad(end_lat - start_lat)
+    d_lon_rad = to_rad(end_lon - start_lon)
+    a = math.sin(d_lat_rad/2)**2 + math.cos(to_rad(start_lat)) * math.cos(to_rad(end_lat)) * math.sin(d_lon_rad/2)**2
+    total_dist = 2 * R * math.asin(math.sqrt(a))
+    
+    # Generate 5 waypoints (0=start, 1,2,3, 4=end)
+    num_segments = 4
+    waypoints = []
+    
+    for i in range(num_segments + 1):
+        f = i / num_segments
+        if f == 0:
+            waypoints.append((start_lat, start_lon))
+            continue
+        if f == 1:
+            waypoints.append((end_lat, end_lon))
+            continue
+            
+        A = math.sin((1 - f) * (total_dist / R)) / math.sin(total_dist / R)
+        B = math.sin(f * (total_dist / R)) / math.sin(total_dist / R)
+        x = A * math.cos(to_rad(start_lat)) * math.cos(to_rad(start_lon)) + B * math.cos(to_rad(end_lat)) * math.cos(to_rad(end_lon))
+        y = A * math.cos(to_rad(start_lat)) * math.sin(to_rad(start_lon)) + B * math.cos(to_rad(end_lat)) * math.sin(to_rad(end_lon))
+        z = A * math.sin(to_rad(start_lat)) + B * math.sin(to_rad(end_lat))
+        
+        lat = to_deg(math.atan2(z, math.sqrt(x**2 + y**2)))
+        lon = to_deg(math.atan2(y, x))
+        waypoints.append((lat, lon))
+
+    # Fetch weather array
+    lats = [wp[0] for wp in waypoints]
+    lons = [wp[1] for wp in waypoints]
+    weather_results, error = fetch_weather_array(lats, lons)
+    
+    if not weather_results or len(weather_results) != len(waypoints):
+        # Fallback if weather fails
+        weather_results = [{
+            "temperature": 15, "wind_speed": 5, "wind_direction": 0, "weather_code": 0, "weather_description": "Clear sky"
+        } for _ in waypoints]
+
+    original_route = []
+    optimized_route = []
+    weather_markers = []
+
+    for i in range(len(waypoints)):
+        lat, lon = waypoints[i]
+        w = weather_results[i]
+        
+        original_route.append({"lat": lat, "lon": lon})
+        
+        # Check for severe weather
+        # Codes: 61+ rain/snow, 95+ thunderstorm. Wind > 15 m/s
+        code = w.get("weather_code", 0)
+        wind = w.get("wind_speed", 0)
+        
+        is_deviated = False
+        opt_lat, opt_lon = lat, lon
+        
+        if (code >= 61 or wind > 15) and i > 0 and i < len(waypoints) - 1:
+            is_deviated = True
+            # Shift by ~50km perpendicular. (Rough approx: 0.5 degrees)
+            # Find bearing of route segment
+            prev_lat, prev_lon = waypoints[i-1]
+            bearing = math.atan2(
+                math.sin(to_rad(lon - prev_lon)) * math.cos(to_rad(lat)),
+                math.cos(to_rad(prev_lat)) * math.sin(to_rad(lat)) - math.sin(to_rad(prev_lat)) * math.cos(to_rad(lat)) * math.cos(to_rad(lon - prev_lon))
+            )
+            perp_bearing = bearing + math.pi / 2
+            shift_dist = 50 / R # 50 km
+            
+            opt_lat = math.asin(math.sin(to_rad(lat)) * math.cos(shift_dist) + math.cos(to_rad(lat)) * math.sin(shift_dist) * math.cos(perp_bearing))
+            opt_lon = to_rad(lon) + math.atan2(math.sin(perp_bearing) * math.sin(shift_dist) * math.cos(to_rad(lat)), math.cos(shift_dist) - math.sin(to_rad(lat)) * math.sin(opt_lat))
+            
+            opt_lat = to_deg(opt_lat)
+            opt_lon = to_deg(opt_lon)
+
+        optimized_route.append({
+            "lat": opt_lat,
+            "lon": opt_lon,
+            "weather": w,
+            "is_deviated": is_deviated
+        })
+        
+        weather_markers.append({
+            "lat": opt_lat,
+            "lon": opt_lon,
+            "weather": w
+        })
+
     return {
-        "origin_lat": olat,
-        "origin_lon": olon,
-        "destination_lat": dlat,
-        "destination_lon": dlon
+        "origin_lat": start_lat,
+        "origin_lon": start_lon,
+        "destination_lat": end_lat,
+        "destination_lon": end_lon,
+        "original_route": original_route,
+        "optimized_route": optimized_route,
+        "weather_markers": weather_markers
     }
 
 @app.get("/api/simulation/{session_id}/replay", response_model=List[schemas.SimulationTelemetryResponse], tags=["Simulation"])

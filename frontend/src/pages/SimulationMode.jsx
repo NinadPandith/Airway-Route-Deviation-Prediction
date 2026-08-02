@@ -7,7 +7,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import {
   Activity, Compass, PlaneTakeoff, RefreshCw, Cloud, MapPin, 
   Clock, Play, Pause, Square, FastForward, Flag, Route as RouteIcon,
-  BarChart3, RotateCcw
+  BarChart3, RotateCcw, CloudRain, CloudLightning, Wind, Sun
 } from 'lucide-react';
 
 import { useSimulation, getClosestPointOnSegment, haversine, calculateBearing } from '../context/SimulationContext';
@@ -41,6 +41,26 @@ const createLabeledIcon = (label, bgColor = '#3b82f6') => {
     className: 'leaflet-custom-marker',
     iconSize: [60, 40],
     iconAnchor: [30, 34],
+  });
+};
+
+const createWeatherIcon = (code) => {
+  let emoji = '☁';
+  let color = '#9ca3af'; // gray
+  if (code === 0 || code === 1) { emoji = '☀'; color = '#fbbf24'; } // clear/sunny
+  else if (code >= 61 && code <= 67) { emoji = '🌧'; color = '#60a5fa'; } // rain
+  else if (code >= 71 && code <= 86) { emoji = '❄'; color = '#e5e7eb'; } // snow
+  else if (code >= 95) { emoji = '⛈'; color = '#ef4444'; } // thunderstorm
+
+  return L.divIcon({
+    html: `
+      <div style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: rgba(0,0,0,0.6); border: 1px solid ${color}; border-radius: 50%; color: ${color}; font-size: 14px; box-shadow: 0 0 10px ${color};">
+        ${emoji}
+      </div>
+    `,
+    className: 'leaflet-weather-marker',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
   });
 };
 
@@ -83,7 +103,7 @@ export default function SimulationMode({ showNotification }) {
     const flight = flights.find(f => f.id === id);
     setSelectedFlight(flight);
     if (flight && status !== 'playing') {
-      stopSession(); // ensure clean state if picking new while stopped
+      stopSession();
     }
   };
 
@@ -94,25 +114,25 @@ export default function SimulationMode({ showNotification }) {
     }
   };
 
-  let plannedRouteCoords = [];
+  let originalRouteCoords = [];
   let deviationVector = null;
   let crossTrackError = 0;
-  if (destination && simAircraft) {
-    plannedRouteCoords = [
-      [destination.origin_lat, destination.origin_lon],
-      [destination.destination_lat, destination.destination_lon]
-    ];
-    
-    const closest = getClosestPointOnSegment(
-      [simAircraft.latitude, simAircraft.longitude],
-      plannedRouteCoords[0],
-      plannedRouteCoords[1]
-    );
-    deviationVector = [
-      [simAircraft.latitude, simAircraft.longitude],
-      [closest[0], closest[1]]
-    ];
-    crossTrackError = haversine(simAircraft.latitude, simAircraft.longitude, closest[0], closest[1]);
+  
+  if (destination && destination.original_route) {
+    originalRouteCoords = destination.original_route.map(wp => [wp.lat, wp.lon]);
+  }
+
+  if (destination && destination.optimized_route && simAircraft) {
+    // Just find cross track error relative to the current active segment
+    const wpIdx = simAircraft.currentWaypointIndex || 0;
+    const optRoute = destination.optimized_route;
+    if (wpIdx < optRoute.length - 1) {
+      const p1 = [optRoute[wpIdx].lat, optRoute[wpIdx].lon];
+      const p2 = [optRoute[wpIdx+1].lat, optRoute[wpIdx+1].lon];
+      const closest = getClosestPointOnSegment([simAircraft.latitude, simAircraft.longitude], p1, p2);
+      deviationVector = [[simAircraft.latitude, simAircraft.longitude], [closest[0], closest[1]]];
+      crossTrackError = haversine(simAircraft.latitude, simAircraft.longitude, closest[0], closest[1]);
+    }
   }
 
   const MetricRow = ({ label, value, unit, highlight = false }) => (
@@ -182,12 +202,12 @@ export default function SimulationMode({ showNotification }) {
         {/* Completion Modal */}
         {status === 'completed' && (
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-[2000] flex items-center justify-center pointer-events-auto p-4">
-             <div className="bg-dark border border-white/20 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-[0_0_50px_rgba(34,211,238,0.2)] text-center overflow-y-auto max-h-[90vh]">
+             <div className="bg-dark border border-white/20 rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-[0_0_50px_rgba(34,211,238,0.2)] text-center overflow-y-auto max-h-[90vh]">
                 <Flag className="w-16 h-16 text-green-400 mx-auto mb-4" />
                 <h2 className="text-2xl font-black text-white mb-2">SIMULATION COMPLETED</h2>
-                <p className="text-white/60 mb-6 text-sm">Aircraft has successfully reached its destination.</p>
+                <p className="text-white/60 mb-6 text-sm">Aircraft has successfully reached its destination through dynamic weather conditions.</p>
                 
-                <div className="grid grid-cols-2 gap-4 mb-8 text-left">
+                <div className="grid grid-cols-2 gap-4 mb-4 text-left">
                   <div className="bg-black/50 p-3 rounded-lg border border-white/5 flex flex-col justify-between">
                      <div className="text-[10px] text-white/50 mb-1 leading-tight">TOTAL FLIGHT TIME</div>
                      <div className="text-lg font-mono text-white truncate">{Math.floor(timeElapsed / 60)}m {Math.floor(timeElapsed % 60)}s</div>
@@ -197,13 +217,24 @@ export default function SimulationMode({ showNotification }) {
                      <div className="text-lg font-mono text-white truncate">{Math.round(progressData.distanceCovered)} km</div>
                   </div>
                   <div className="bg-black/50 p-3 rounded-lg border border-white/5 flex flex-col justify-between">
-                     <div className="text-[10px] text-white/50 mb-1 leading-tight">AVG GROUND SPEED</div>
-                     <div className="text-lg font-mono text-white truncate">{Math.round(analytics.avgSpeedSum / Math.max(1, analytics.speedCount))} kt</div>
+                     <div className="text-[10px] text-white/50 mb-1 leading-tight">MAX WIND ENCOUNTERED</div>
+                     <div className="text-lg font-mono text-white truncate">{Math.round(analytics.maxWind)} m/s</div>
                   </div>
                   <div className="bg-black/50 p-3 rounded-lg border border-white/5 flex flex-col justify-between">
-                     <div className="text-[10px] text-white/50 mb-1 leading-tight">MAX DEVIATION</div>
-                     <div className="text-lg font-mono text-red-400 truncate">{analytics.maxDev.toFixed(2)} km</div>
+                     <div className="text-[10px] text-white/50 mb-1 leading-tight">WEATHER ZONES CROSSED</div>
+                     <div className="text-lg font-mono text-white truncate">{analytics.weatherZonesCrossed}</div>
                   </div>
+                </div>
+                
+                <div className="bg-red-500/10 p-3 rounded-lg border border-red-500/20 flex justify-between items-center mb-8 text-left">
+                     <div>
+                       <div className="text-[10px] text-white/50 mb-1 leading-tight">TOTAL WEATHER DELAY</div>
+                       <div className="text-lg font-mono text-red-400 truncate">{Math.floor(analytics.weatherDelaySecs / 60)}m {Math.floor(analytics.weatherDelaySecs % 60)}s</div>
+                     </div>
+                     <div className="text-right">
+                       <div className="text-[10px] text-white/50 mb-1 leading-tight">WORST WEATHER</div>
+                       <div className="text-sm font-bold text-white truncate">{analytics.worstWeather}</div>
+                     </div>
                 </div>
 
                 <div className="flex justify-center gap-4 flex-wrap">
@@ -220,12 +251,28 @@ export default function SimulationMode({ showNotification }) {
           
           {selectedFlight && destination && <MapController flight={selectedFlight} destination={destination} />}
 
-          {plannedRouteCoords.length > 0 && (
-            <Polyline positions={plannedRouteCoords} color="#3b82f6" weight={3} dashArray="8, 12" opacity={0.6} />
+          {/* Original Straight-Line Route */}
+          {originalRouteCoords.length > 0 && (
+            <Polyline positions={originalRouteCoords} color="#3b82f6" weight={2} dashArray="4, 8" opacity={0.4} />
           )}
 
+          {/* Weather-Optimized Route Segments */}
+          {destination && destination.optimized_route && destination.optimized_route.map((wp, i, arr) => {
+            if (i === arr.length - 1) return null;
+            const isSevere = wp.is_deviated || (wp.weather && wp.weather.weather_code >= 61);
+            return (
+              <Polyline 
+                key={`opt-seg-${i}`} 
+                positions={[[wp.lat, wp.lon], [arr[i+1].lat, arr[i+1].lon]]} 
+                color={isSevere ? "#ef4444" : "#22c55e"} 
+                weight={3} 
+                opacity={0.8}
+              />
+            );
+          })}
+
           {history.length > 0 && (
-            <Polyline positions={history} color="#22c55e" weight={4} opacity={0.9} />
+            <Polyline positions={history} color="#ffffff" weight={3} opacity={0.9} dashArray="2, 6" />
           )}
 
           {deviationVector && (
@@ -239,6 +286,11 @@ export default function SimulationMode({ showNotification }) {
             </>
           )}
 
+          {/* Weather Markers */}
+          {destination && destination.weather_markers && destination.weather_markers.map((wp, i) => (
+             <Marker key={`weather-${i}`} position={[wp.lat, wp.lon]} icon={createWeatherIcon(wp.weather?.weather_code)} />
+          ))}
+
           {simAircraft && (
             <Marker position={[simAircraft.latitude, simAircraft.longitude]} icon={createAircraftIcon(simAircraft.heading, '#ffffff')} zIndexOffset={1000}>
               <Tooltip permanent direction="right" offset={[15, 0]} className="bg-black/80 backdrop-blur border border-white/20 text-white font-mono text-xs rounded shadow-lg px-2 py-1">
@@ -251,7 +303,7 @@ export default function SimulationMode({ showNotification }) {
         </MapContainer>
       </div>
 
-      {/* DASHBOARD VIEW - FIXED HEIGHT / RESPONSIVE OVERFLOW */}
+      {/* DASHBOARD VIEW */}
       <div className="w-full xl:w-[450px] shrink-0 flex flex-col h-full bg-dark/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-y-auto no-scrollbar relative p-4 gap-4">
         <h2 className="text-xl font-black text-white flex items-center gap-2 shrink-0">
           <BarChart3 className="w-5 h-5 text-secondary" /> AVIATION METRICS
@@ -281,7 +333,36 @@ export default function SimulationMode({ showNotification }) {
           </div>
         </div>
 
-        {/* 2. TELEMETRY */}
+        {/* 2. WEATHER ANALYSIS (NEW) */}
+        <div className="bg-black/40 rounded-xl p-4 border border-white/5 relative shrink-0">
+          <div className="absolute top-0 left-0 w-1 bg-yellow-400 h-full rounded-l-xl"></div>
+          <h3 className="text-[10px] font-bold text-white/50 mb-3 tracking-widest flex items-center gap-2">
+            <CloudLightning className="w-3 h-3 text-yellow-400 shrink-0" /> WEATHER ANALYSIS
+          </h3>
+          
+          <div className="flex justify-between items-center mb-3 bg-white/5 p-2 rounded-lg">
+             <div className="text-xs font-bold text-white flex items-center gap-2">
+               <CloudRain className="w-4 h-4 text-blue-400" />
+               Current Zone
+             </div>
+             <div className="text-sm font-mono text-secondary">{simAircraft ? (simAircraft.weather_severity > 0.5 ? 'Severe Storm' : 'Moderate/Clear') : '---'}</div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+            <div className="flex flex-col gap-1">
+              <MetricRow label="Wind Spd" value={simAircraft ? Math.round(simAircraft.wind_speed) : '---'} unit="m/s" highlight />
+              <MetricRow label="Temperature" value={simAircraft?.temperature.toFixed(1) || '---'} unit="°C" />
+              <MetricRow label="Weather Delay" value={`+${Math.round(analytics.weatherDelaySecs)}`} unit="s" highlight />
+            </div>
+            <div className="flex flex-col gap-1">
+              <MetricRow label="Max Wind" value={Math.round(analytics.maxWind)} unit="m/s" />
+              <MetricRow label="Zones Crossed" value={analytics.weatherZonesCrossed} />
+              <MetricRow label="Impact Score" value={analytics.weatherImpactScore.toFixed(1)} highlight />
+            </div>
+          </div>
+        </div>
+
+        {/* 3. TELEMETRY */}
         <div className="bg-black/40 rounded-xl p-4 border border-white/5 relative shrink-0">
           <div className="absolute top-0 left-0 w-1 bg-secondary h-full rounded-l-xl"></div>
           <h3 className="text-[10px] font-bold text-white/50 mb-3 tracking-widest flex items-center gap-2">
@@ -289,30 +370,13 @@ export default function SimulationMode({ showNotification }) {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
              <div className="flex flex-col gap-1">
-                <MetricRow label="Latitude" value={simAircraft?.latitude.toFixed(4) || '---'} />
-                <MetricRow label="Longitude" value={simAircraft?.longitude.toFixed(4) || '---'} />
                 <MetricRow label="Ground Speed" value={simAircraft ? Math.round(simAircraft.speed) : '---'} unit="kt" highlight />
-                <MetricRow label="Air Speed" value={simAircraft ? Math.round(simAircraft.speed * 1.05) : '---'} unit="kt" />
+                <MetricRow label="Altitude" value={simAircraft ? Math.round(simAircraft.altitude) : '---'} unit="ft" highlight />
              </div>
              <div className="flex flex-col gap-1">
-                <MetricRow label="Altitude" value={simAircraft ? Math.round(simAircraft.altitude) : '---'} unit="ft" highlight />
-                <MetricRow label="Vertical Spd" value={simAircraft ? Math.round(simAircraft.vertical_speed) : '---'} unit="fpm" />
                 <MetricRow label="Heading" value={simAircraft ? Math.round(simAircraft.heading) : '---'} unit="°" />
-                <MetricRow label="Bearing" value={destination && simAircraft ? Math.round(calculateBearing(simAircraft.latitude, simAircraft.longitude, destination.destination_lat, destination.destination_lon)) : '---'} unit="°" />
+                <MetricRow label="Bearing" value={destination && simAircraft && destination.optimized_route[simAircraft.currentWaypointIndex+1] ? Math.round(calculateBearing(simAircraft.latitude, simAircraft.longitude, destination.optimized_route[simAircraft.currentWaypointIndex+1].lat, destination.optimized_route[simAircraft.currentWaypointIndex+1].lon)) : '---'} unit="°" />
              </div>
-          </div>
-        </div>
-
-        {/* 3. ROUTE ANALYSIS */}
-        <div className="bg-black/40 rounded-xl p-4 border border-white/5 relative shrink-0">
-          <div className="absolute top-0 left-0 w-1 bg-green-500 h-full rounded-l-xl"></div>
-          <h3 className="text-[10px] font-bold text-white/50 mb-3 tracking-widest flex items-center gap-2">
-            <MapPin className="w-3 h-3 shrink-0" /> ROUTE ANALYSIS
-          </h3>
-          <div className="flex flex-col gap-1">
-            <MetricRow label="Route Status" value={crossTrackError > 5 ? 'Deviating' : 'On Track'} highlight />
-            <MetricRow label="Cross Track Error" value={crossTrackError.toFixed(2)} unit="km" />
-            <MetricRow label="Deviation %" value={prediction ? prediction.deviation_percentage : '0.00'} unit="%" />
           </div>
         </div>
 
@@ -343,37 +407,16 @@ export default function SimulationMode({ showNotification }) {
 
               <MetricRow label="Predicted Delay" value={`+${prediction.estimated_delay}`} unit="mins" highlight />
               <MetricRow label="Delay Category" value={prediction.estimated_delay > 30 ? 'Severe' : prediction.estimated_delay > 10 ? 'Moderate' : 'None'} />
-              <MetricRow label="Fuel Impact (Est.)" value={`+${(crossTrackError * 12.5).toFixed(0)}`} unit="kg" />
+              <MetricRow label="Deviation %" value={prediction.deviation_percentage} unit="%" />
               <MetricRow label="Prediction Time" value={new Date(prediction.prediction_time).toLocaleTimeString()} />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-6 opacity-50 text-xs text-white/50 font-mono text-center">
               <RefreshCw className="w-5 h-5 animate-spin mb-2" />
-              WAITING FOR DATA...
+              AWAITING SENSOR DATA...
             </div>
           )}
         </div>
-        
-        {/* 5. WEATHER & ENVIRONMENT */}
-        <div className="bg-black/40 rounded-xl p-4 border border-white/5 relative shrink-0">
-          <div className="absolute top-0 left-0 w-1 bg-yellow-500 h-full rounded-l-xl"></div>
-          <h3 className="text-[10px] font-bold text-white/50 mb-3 tracking-widest flex items-center gap-2">
-            <Cloud className="w-3 h-3 shrink-0" /> WEATHER ENVIRONMENT
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-            <div className="flex flex-col gap-1">
-              <MetricRow label="Condition" value={prediction?.weather_risk || 'Clear'} highlight />
-              <MetricRow label="Temperature" value={simAircraft?.temperature.toFixed(1) || '---'} unit="°C" />
-              <MetricRow label="Visibility" value="10" unit="km" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <MetricRow label="Wind Spd" value={simAircraft ? Math.round(simAircraft.wind_speed) : '---'} unit="kt" />
-              <MetricRow label="Wind Dir" value={simAircraft ? Math.round(simAircraft.wind_direction) : '---'} unit="°" />
-              <MetricRow label="Pressure" value="1013" unit="hPa" />
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
   );
