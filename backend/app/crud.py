@@ -178,7 +178,7 @@ def get_latest_weather_for_aircraft(db: Session, aircraft_id: int) -> Optional[m
 
 def get_live_dashboard_stats(db: Session) -> dict:
     """Build summary statistics for the live dashboard."""
-    aircrafts = get_current_aircraft_telemetry(db, limit=None)
+    aircrafts = get_current_aircraft_telemetry(db, limit=700)
     if not aircrafts:
         return {
             "total_live_aircraft": 0,
