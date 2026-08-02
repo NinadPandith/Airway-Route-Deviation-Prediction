@@ -12,6 +12,38 @@ import {
 } from 'lucide-react';
 import { getLiveAircraft, getLiveWeather, getLiveDashboard, predictRouteDeviation, getLiveRoute } from '../services/api';
 
+// --- Geometry Helpers for Analytics Dashboard ---
+const toRad = (value) => (value * Math.PI) / 180;
+const toDeg = (value) => (value * 180) / Math.PI;
+
+const calculateBearing = (startLat, startLng, destLat, destLng) => {
+  const startLatRad = toRad(startLat);
+  const startLngRad = toRad(startLng);
+  const destLatRad = toRad(destLat);
+  const destLngRad = toRad(destLng);
+  const y = Math.sin(destLngRad - startLngRad) * Math.cos(destLatRad);
+  const x = Math.cos(startLatRad) * Math.sin(destLatRad) -
+            Math.sin(startLatRad) * Math.cos(destLatRad) * Math.cos(destLngRad - startLngRad);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+};
+
+// 2D approximation for closest point on segment to render deviation line
+const getClosestPointOnSegment = (p, p1, p2) => {
+  const x = p[0], y = p[1];
+  const x1 = p1[0], y1 = p1[1];
+  const x2 = p2[0], y2 = p2[1];
+  const A = x - x1, B = y - y1, C = x2 - x1, D = y2 - y1;
+  const dot = A * C + B * D;
+  const len_sq = C * C + D * D;
+  let param = -1;
+  if (len_sq !== 0) param = dot / len_sq;
+  let xx, yy;
+  if (param < 0) { xx = x1; yy = y1; }
+  else if (param > 1) { xx = x2; yy = y2; }
+  else { xx = x1 + param * C; yy = y1 + param * D; }
+  return [xx, yy];
+};
+
 // Create a custom SVG icon for aircraft that we can rotate and animate smoothly
 const createAircraftIcon = (heading = 0, color = '#22d3ee') => {
   return L.divIcon({
@@ -459,25 +491,47 @@ export default function LiveMonitoring({ showNotification }) {
                       <Tooltip direction="top" offset={[0, -10]}>{routeInfo.destination_iata} - {routeInfo.destination_airport}</Tooltip>
                     </Marker>
                     
+                    {/* Planned Route */}
                     <Polyline 
                       positions={[
                         [routeInfo.origin_lat, routeInfo.origin_lon], 
-                        [ac.latitude, ac.longitude]
-                      ]} 
-                      color="#10b981" 
-                      weight={2} 
-                      opacity={0.6}
-                    />
-                    <Polyline 
-                      positions={[
-                        [ac.latitude, ac.longitude], 
                         [routeInfo.destination_lat, routeInfo.destination_lon]
                       ]} 
-                      color="#3b82f6" 
+                      color="#8b5cf6" 
                       weight={2} 
                       opacity={0.6}
                       dashArray="5, 5"
-                    />
+                    >
+                      <Tooltip sticky>Planned Route</Tooltip>
+                    </Polyline>
+                    
+                    {/* Deviation Vector */}
+                    {(() => {
+                      const closest = getClosestPointOnSegment(
+                        [ac.latitude, ac.longitude],
+                        [routeInfo.origin_lat, routeInfo.origin_lon],
+                        [routeInfo.destination_lat, routeInfo.destination_lon]
+                      );
+                      return (
+                        <React.Fragment>
+                          <Polyline 
+                            positions={[
+                              [ac.latitude, ac.longitude], 
+                              closest
+                            ]} 
+                            color="#ef4444" 
+                            weight={2} 
+                            opacity={0.8}
+                            dashArray="4, 4"
+                          >
+                            <Tooltip sticky>Deviation Vector</Tooltip>
+                          </Polyline>
+                          <Marker position={closest} icon={createAirportIcon()}>
+                            <Tooltip direction="bottom">Deviation Point</Tooltip>
+                          </Marker>
+                        </React.Fragment>
+                      );
+                    })()}
                   </>
                 )}
               </React.Fragment>
@@ -732,12 +786,12 @@ export default function LiveMonitoring({ showNotification }) {
                 )}
               </div>
 
-              {/* AI PREDICTION MODEL */}
+              {/* AI PREDICTION MODEL & ANALYTICS DASHBOARD */}
               <div className="border border-primary rounded-2xl overflow-hidden bg-bg-primary relative shadow-md group">
                 <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(118,183,166,0.1)_50%,transparent_75%)] bg-[length:250%_250%] animate-scan pointer-events-none"></div>
                 <button onClick={() => toggleSection('prediction')} className="w-full p-4 flex items-center justify-between bg-bg-secondary/50 hover:bg-bg-secondary transition-colors">
                   <span className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2.5">
-                    <Activity className="w-4.5 h-4.5 group-hover:animate-pulse" /> Machine Learning Prediction
+                    <Activity className="w-4.5 h-4.5 group-hover:animate-pulse" /> Aviation Analytics Dashboard
                   </span>
                   {expandedSections.prediction ? <ChevronDown className="w-4.5 h-4.5 text-primary" /> : <ChevronRight className="w-4.5 h-4.5 text-dark/50 group-hover:text-primary" />}
                 </button>
@@ -749,113 +803,216 @@ export default function LiveMonitoring({ showNotification }) {
                         <div className="text-[10px] text-primary font-mono font-bold tracking-widest animate-pulse">RUNNING NEURAL INFERENCE...</div>
                       </div>
                     ) : prediction && !prediction.error ? (
-                      <div>
-                        <div className="text-center mb-5">
-                          <div className={`inline-block px-4 py-2 rounded-xl border text-[11px] font-mono font-extrabold tracking-widest uppercase shadow-md ${getRiskColor(prediction.risk_level)}`}>
-                            {prediction.risk_level}
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 text-left mt-2">
-                          {(() => {
-                            const hasRoute = routeInfo && !routeInfo.error && routeInfo.origin_iata;
-                            const plannedDist = prediction.planned_route_distance || 0;
-                            const travelledDist = prediction.current_distance_travelled || 0;
-                            const remainingDist = Math.max(0, plannedDist - travelledDist);
-                            const completionPct = plannedDist > 0 ? ((travelledDist / plannedDist) * 100).toFixed(1) : 0;
-                            
-                            let estimatedArrival = 'N/A';
-                            if (routeInfo?.arrival_time) {
-                              estimatedArrival = new Date(routeInfo.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            } else if (remainingDist > 0 && selectedAircraft?.velocity > 0) {
-                              const speedKmH = selectedAircraft.velocity * 1.852;
-                              const hoursRemaining = remainingDist / speedKmH;
-                              const arrivalDate = new Date(Date.now() + hoursRemaining * 3600 * 1000);
-                              estimatedArrival = arrivalDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            }
+                      <div className="space-y-6">
+                        {(() => {
+                          const hasRoute = routeInfo && !routeInfo.error && routeInfo.origin_iata;
+                          const plannedDist = prediction.planned_route_distance || 0;
+                          const travelledDist = prediction.current_distance_travelled || 0;
+                          const remainingDist = Math.max(0, plannedDist - travelledDist);
+                          
+                          let estimatedArrival = 'N/A';
+                          let hoursRemaining = 0;
+                          if (routeInfo?.arrival_time) {
+                            estimatedArrival = new Date(routeInfo.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                          } else if (remainingDist > 0 && selectedAircraft?.velocity > 0) {
+                            const speedKmH = selectedAircraft.velocity * 1.852;
+                            hoursRemaining = remainingDist / speedKmH;
+                            const arrivalDate = new Date(Date.now() + hoursRemaining * 3600 * 1000);
+                            estimatedArrival = arrivalDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                          }
+                          
+                          const etaFormatted = hoursRemaining > 0 ? `${Math.floor(hoursRemaining)}h ${Math.round((hoursRemaining % 1) * 60)}m` : 'N/A';
+                          
+                          let headingDiff = 'N/A';
+                          if (hasRoute && routeInfo.origin_lat && routeInfo.destination_lat && selectedAircraft?.heading) {
+                             const brng = calculateBearing(selectedAircraft.latitude, selectedAircraft.longitude, routeInfo.destination_lat, routeInfo.destination_lon);
+                             let diff = Math.abs(brng - selectedAircraft.heading);
+                             if (diff > 180) diff = 360 - diff;
+                             headingDiff = diff.toFixed(1) + '°';
+                          }
 
-                            return (
-                              <>
-                                <div className="col-span-2 p-3 rounded-xl bg-bg-primary border border-bg-secondary text-center shadow-sm">
-                                  <div className="text-[10px] text-dark/70 uppercase font-mono font-bold tracking-widest">Route Interpolation</div>
-                                  {!hasRoute ? (
-                                    <div className="text-sm font-extrabold text-red-500 mt-1">Route information unavailable</div>
-                                  ) : (
-                                    <div className="text-sm font-extrabold text-dark mt-1">
-                                      {routeInfo.origin_airport || routeInfo.origin_iata} <span className="text-dark/40 mx-2">→</span> {routeInfo.destination_airport || routeInfo.destination_iata}
-                                    </div>
-                                  )}
-                                </div>
-                                
-                                {!hasRoute ? (
-                                  <div className="col-span-2 p-3 rounded-xl bg-bg-primary border border-bg-secondary text-center shadow-sm">
-                                    <div className="text-sm font-bold text-dark/70">N/A (Route data unavailable)</div>
+                          return (
+                            <>
+                              {/* Flight Information */}
+                              <div className="space-y-2">
+                                <h3 className="text-[10px] text-dark/70 uppercase font-mono font-bold tracking-widest border-b border-bg-secondary pb-1">Flight Information</h3>
+                                <div className="grid grid-cols-2 gap-2 text-left">
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Flight Number</div>
+                                    <div className="text-xs font-bold text-dark">{routeInfo?.flight_number || selectedAircraft?.callsign || 'N/A'}</div>
                                   </div>
-                                ) : (
-                                  <>
-                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
-                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Planned Dist.</div>
-                                      <div className="text-sm font-bold text-dark">{prediction.planned_route_distance ? prediction.planned_route_distance + ' km' : 'N/A'}</div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Aircraft Reg</div>
+                                    <div className="text-xs font-bold text-dark">{routeInfo?.aircraft_registration || 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Aircraft Model</div>
+                                    <div className="text-xs font-bold text-dark">{routeInfo?.aircraft_model || 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Airline</div>
+                                    <div className="text-xs font-bold text-dark">{routeInfo?.airline || 'N/A'}</div>
+                                  </div>
+                                  <div className="col-span-2 p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Route</div>
+                                    <div className="text-xs font-bold text-dark">
+                                      {hasRoute ? `${routeInfo.origin_airport || routeInfo.origin_iata} → ${routeInfo.destination_airport || routeInfo.destination_iata}` : 'N/A'}
                                     </div>
-                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
-                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Dist. Travelled</div>
-                                      <div className="text-sm font-bold text-dark">{prediction.current_distance_travelled ? prediction.current_distance_travelled + ' km' : 'N/A'}</div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Route Analysis */}
+                              <div className="space-y-2">
+                                <h3 className="text-[10px] text-dark/70 uppercase font-mono font-bold tracking-widest border-b border-bg-secondary pb-1">Route Analysis</h3>
+                                <div className="grid grid-cols-2 gap-2 text-left">
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Planned Dist</div>
+                                    <div className="text-xs font-bold text-dark">{plannedDist ? plannedDist + ' km' : 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Travelled Dist</div>
+                                    <div className="text-xs font-bold text-dark">{travelledDist ? travelledDist + ' km' : 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Remaining Dist</div>
+                                    <div className="text-xs font-bold text-dark">{remainingDist > 0 ? remainingDist.toFixed(1) + ' km' : 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Route Status</div>
+                                    <div className="text-xs font-bold text-dark capitalize">{routeInfo?.flight_status || 'Active'}</div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Deviation Analysis */}
+                              <div className="space-y-2">
+                                <h3 className="text-[10px] text-dark/70 uppercase font-mono font-bold tracking-widest border-b border-bg-secondary pb-1">Deviation Analysis</h3>
+                                <div className="grid grid-cols-2 gap-2 text-left">
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Deviation Dist</div>
+                                    <div className="text-xs font-bold text-dark">{prediction.deviation_distance ? prediction.deviation_distance + ' km' : 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Deviation %</div>
+                                    <div className="text-xs font-bold text-dark">{prediction.deviation_percentage ? prediction.deviation_percentage + '%' : 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Cross-track Error</div>
+                                    <div className="text-xs font-bold text-dark">{prediction.deviation_distance ? prediction.deviation_distance + ' km' : 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Heading Diff</div>
+                                    <div className="text-xs font-bold text-dark">{headingDiff}</div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Prediction Metrics */}
+                              <div className="space-y-2">
+                                <h3 className="text-[10px] text-dark/70 uppercase font-mono font-bold tracking-widest border-b border-bg-secondary pb-1">Prediction Metrics</h3>
+                                <div className="grid grid-cols-2 gap-2 text-left">
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Predicted Delay</div>
+                                    <div className="text-xs font-bold text-red-600">{prediction.estimated_delay} mins</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Delay Category</div>
+                                    <div className="text-xs font-bold text-dark">{prediction.estimated_delay > 30 ? 'High' : prediction.estimated_delay > 10 ? 'Medium' : 'Low'}</div>
+                                  </div>
+                                  <div className="col-span-2 p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50 flex justify-between items-center">
+                                    <div>
+                                      <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Risk Level</div>
+                                      <div className={`text-xs font-bold uppercase tracking-widest ${getRiskColor(prediction.risk_level)}`}>{prediction.risk_level}</div>
                                     </div>
-                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
-                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Remaining Dist.</div>
-                                      <div className="text-sm font-bold text-dark">{remainingDist > 0 ? remainingDist.toFixed(2) + ' km' : 'N/A'}</div>
+                                    <div className="text-right">
+                                      <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Confidence / Prob</div>
+                                      <div className="text-xs font-bold text-dark">{prediction.confidence_score ? prediction.confidence_score + '%' : Math.round(prediction.probability * 100) + '%'}</div>
                                     </div>
-                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
-                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Completion %</div>
-                                      <div className="text-sm font-bold text-dark">{completionPct > 0 ? completionPct + '%' : 'N/A'}</div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Operational Metrics */}
+                              <div className="space-y-2">
+                                <h3 className="text-[10px] text-dark/70 uppercase font-mono font-bold tracking-widest border-b border-bg-secondary pb-1">Operational Metrics</h3>
+                                <div className="grid grid-cols-3 gap-2 text-left">
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Ground Spd</div>
+                                    <div className="text-xs font-bold text-dark">{selectedAircraft?.velocity ? (selectedAircraft.velocity * 1.94384).toFixed(0) + ' kts' : 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Altitude</div>
+                                    <div className="text-xs font-bold text-dark">{selectedAircraft?.altitude ? (selectedAircraft.altitude * 3.28084).toFixed(0) + ' ft' : 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Heading</div>
+                                    <div className="text-xs font-bold text-dark">{selectedAircraft?.heading ? selectedAircraft.heading.toFixed(0) + '°' : 'N/A'}</div>
+                                  </div>
+                                  <div className="col-span-3 grid grid-cols-2 gap-2">
+                                    <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                      <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Estimated Time Rem</div>
+                                      <div className="text-xs font-bold text-dark">{etaFormatted}</div>
                                     </div>
-                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
-                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Deviation Dist.</div>
-                                      <div className="text-sm font-bold text-dark">{prediction.deviation_distance ? prediction.deviation_distance + ' km' : 'N/A'}</div>
+                                    <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                      <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Est. Arrival Time</div>
+                                      <div className="text-xs font-bold text-primary">{estimatedArrival}</div>
                                     </div>
-                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
-                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Deviation %</div>
-                                      <div className="text-sm font-bold text-dark">{prediction.deviation_percentage ? prediction.deviation_percentage + '%' : 'N/A'}</div>
-                                    </div>
-                                    <div className="col-span-2 p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm text-center">
-                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Estimated Arrival</div>
-                                      <div className="text-sm font-bold text-primary">{estimatedArrival}</div>
-                                    </div>
-                                  </>
-                                )}
-                              </>
-                            );
-                          })()}
-                          
-                          <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
-                            <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Weather Risk</div>
-                            <div className="text-sm font-bold text-dark">{prediction.weather_risk} <span className="text-[10px] text-dark/50 font-mono">({prediction.weather_impact_score}%)</span></div>
-                          </div>
-                          <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
-                            <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Predicted Delay</div>
-                            <div className="text-sm font-bold text-red-600">{prediction.estimated_delay}m</div>
-                          </div>
-                          
-                          <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
-                            <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Overall Risk</div>
-                            <div className="text-sm font-bold text-dark">{prediction.overall_risk_score ? prediction.overall_risk_score + '%' : 'N/A'}</div>
-                          </div>
-                          <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
-                            <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Confidence</div>
-                            <div className="text-sm font-bold text-dark">{prediction.confidence_score ? prediction.confidence_score + '%' : Math.round(prediction.probability * 100) + '%'}</div>
-                          </div>
-                          
-                          <div className="col-span-2 p-4 rounded-xl bg-bg-primary border border-bg-secondary text-center shadow-sm mt-1">
-                            <div className="text-[10px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-2">Suggested Action</div>
-                            <div className="text-xs font-bold text-primary bg-primary/10 inline-block px-3 py-1.5 rounded-lg border border-primary/30">{prediction.suggested_action || 'N/A'}</div>
-                          </div>
-                        </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Weather Influence */}
+                              <div className="space-y-2">
+                                <h3 className="text-[10px] text-dark/70 uppercase font-mono font-bold tracking-widest border-b border-bg-secondary pb-1">Weather Influence</h3>
+                                <div className="grid grid-cols-3 gap-2 text-left">
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Severity</div>
+                                    <div className="text-xs font-bold text-dark">{prediction.weather_risk}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Wind</div>
+                                    <div className="text-xs font-bold text-dark">{weather?.wind_speed ? weather.wind_speed + ' m/s' : 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Visibility</div>
+                                    <div className="text-xs font-bold text-dark">{weather?.visibility ? weather.visibility + ' m' : 'N/A'}</div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* ML Model Information */}
+                              <div className="space-y-2">
+                                <h3 className="text-[10px] text-dark/70 uppercase font-mono font-bold tracking-widest border-b border-bg-secondary pb-1">ML Model Information</h3>
+                                <div className="grid grid-cols-2 gap-2 text-left">
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Model Name</div>
+                                    <div className="text-[10px] font-bold text-dark">Gradient Boosting Ensemble</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Version</div>
+                                    <div className="text-[10px] font-bold text-dark">v1.2.0</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Timestamp</div>
+                                    <div className="text-[10px] font-bold text-dark truncate" title={prediction.prediction_time}>{prediction.prediction_time ? new Date(prediction.prediction_time).toLocaleTimeString() : 'N/A'}</div>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-bg-secondary/30 border border-bg-secondary/50">
+                                    <div className="text-[8px] text-dark/50 uppercase font-mono font-bold">Source</div>
+                                    <div className="text-[10px] font-bold text-dark">Real-time Telemetry</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     ) : (
                       <div className="text-center py-6 space-y-2">
                         <div className="inline-block px-4 py-1.5 rounded-xl bg-bg-secondary border border-bg-secondary text-dark/70 text-[10px] font-mono font-bold tracking-widest shadow-inner">
                           PREDICTION FAILED
                         </div>
-                        <div className="text-[10px] text-red-600 font-mono px-4">{prediction.message || 'Unknown error during inference'}</div>
+                        <div className="text-[10px] text-red-600 font-mono px-4">{prediction?.message || 'Unknown error during inference'}</div>
                       </div>
                     )}
                   </div>

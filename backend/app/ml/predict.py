@@ -1,3 +1,4 @@
+import logging
 import datetime
 import numpy as np
 from sqlalchemy.orm import Session
@@ -6,6 +7,7 @@ from app.models import AircraftTelemetry, WeatherTelemetry, FlightRouteCache
 from app.ml.model_loader import get_model, get_scaler
 import airportsdata
 
+logger = logging.getLogger(__name__)
 airports_iata = airportsdata.load('IATA')
 
 def calculate_haversine(lat1, lon1, lat2, lon2):
@@ -84,18 +86,21 @@ def make_prediction(icao24: str, db: Session):
     from app.utils.geo import haversine, cross_track_distance
     
     if telemetry.callsign or telemetry.icao24:
-        route = get_route_for_aircraft(db, telemetry.callsign or telemetry.icao24)
-        if route and route.origin_lat and route.destination_lat:
-            olat, olon = route.origin_lat, route.origin_lon
-            dlat, dlon = route.destination_lat, route.destination_lon
-            clat, clon = telemetry.latitude or 0.0, telemetry.longitude or 0.0
+        try:
+            route = get_route_for_aircraft(db, telemetry.callsign or telemetry.icao24)
+            if route and route.origin_lat is not None and route.origin_lon is not None and route.destination_lat is not None and route.destination_lon is not None:
+                olat, olon = route.origin_lat, route.origin_lon
+                dlat, dlon = route.destination_lat, route.destination_lon
+                clat, clon = telemetry.latitude or 0.0, telemetry.longitude or 0.0
 
-            planned_route_distance = haversine(olat, olon, dlat, dlon)
-            current_distance_travelled = haversine(olat, olon, clat, clon)
-            deviation_distance = cross_track_distance(olat, olon, dlat, dlon, clat, clon)
+                planned_route_distance = haversine(olat, olon, dlat, dlon)
+                current_distance_travelled = haversine(olat, olon, clat, clon)
+                deviation_distance = cross_track_distance(olat, olon, dlat, dlon, clat, clon)
 
-            if planned_route_distance > 0:
-                deviation_percentage = (deviation_distance / planned_route_distance) * 100
+                if planned_route_distance > 0:
+                    deviation_percentage = (deviation_distance / planned_route_distance) * 100
+        except Exception as e:
+            logger.warning(f"Failed to calculate route metrics for {icao24}: {e}")
 
     wind_effect = w_spd * np.cos(np.radians(hdg - w_dir))
     weather_severity_score = (w_spd / 30.0) + ((10000 - vis) / 10000.0) + (rain / 10.0) + (cloud / 100.0)
@@ -124,24 +129,26 @@ def make_prediction(icao24: str, db: Session):
         prediction = model.predict(scaled_features)[0]
         probabilities = model.predict_proba(scaled_features)[0]
     except Exception as e:
-        # Fallback if something goes wrong with shapes
-        print(f"Prediction error: {e}")
+        # Fallback if something goes wrong with shapes or model execution
+        logger.warning(f"Prediction fallback for {icao24}: {e}")
         prediction = 0
         probabilities = [1.0, 0.0, 0.0]
 
     risk_mapping = {0: "Low Risk", 1: "Medium Risk", 2: "High Risk"}
     risk_level = risk_mapping.get(int(prediction), "Unknown")
     
-    # Probability of the predicted class
-    prob = float(np.max(probabilities))
+    # Probabilities for each class
+    prob_low = float(probabilities[0]) if len(probabilities) > 0 else 1.0
+    prob_medium = float(probabilities[1]) if len(probabilities) > 1 else 0.0
+    prob_high = float(probabilities[2]) if len(probabilities) > 2 else 0.0
     
-    # Calculate estimated delay (heuristic based on risk)
-    if risk_level == "High Risk":
-        estimated_delay = 45 # mins
-    elif risk_level == "Medium Risk":
-        estimated_delay = 15
-    else:
-        estimated_delay = 0
+    # Confidence in the predicted class
+    prob = float(np.max(probabilities))
+    confidence_score = prob * 100.0
+    
+    # Calculate estimated delay (heuristic continuous formula)
+    # High risk contributes ~45 mins, Medium risk contributes ~15 mins, plus deviation scaling
+    estimated_delay = int(round((prob_high * 45) + (prob_medium * 15) + (deviation_percentage * 2.5)))
 
     # Weather Risk descriptive
     if weather_severity_score > 0.8:
@@ -151,8 +158,9 @@ def make_prediction(icao24: str, db: Session):
     else:
         weather_risk = "Clear"
         
-    overall_risk_score = min((prob * 100) + (deviation_percentage * 2) + (weather_severity_score * 20), 100.0)
-    confidence_score = prob * 100
+    # Calculate a more accurate overall risk score (0-100)
+    risk_prob_score = (prob_high * 100) + (prob_medium * 50)
+    overall_risk_score = min(risk_prob_score + (deviation_percentage * 2) + (weather_severity_score * 20), 100.0)
     
     suggested_action = "Maintain course"
     if deviation_percentage > 5:

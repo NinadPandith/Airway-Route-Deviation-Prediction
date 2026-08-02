@@ -6,7 +6,7 @@ echo =======================================================
 echo.
 
 echo [1/2] Starting FastAPI Backend on Port 8000...
-start "FastAPI Backend" cmd /k "cd backend && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+start "FastAPI Backend" cmd /k "cd backend && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
 
 echo [2/2] Starting Vite Frontend on Port 5173...
 start "Vite Frontend" cmd /k "cd frontend && npm run dev"

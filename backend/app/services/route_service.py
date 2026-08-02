@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Optional
 import requests
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
 from .. import models, schemas, crud
 import airportsdata
 from ..utils.geo import haversine, bearing
@@ -90,9 +89,8 @@ def simulate_route(db: Session, callsign: str) -> Optional[schemas.RouteInfoResp
     try:
         db.add(new_cache)
         db.commit()
-    except IntegrityError:
+    except Exception as e:
         db.rollback()
-        # Already inserted by another concurrent request, which is fine
 
     return schemas.RouteInfoResponse(
         callsign=callsign,
@@ -201,9 +199,8 @@ def get_route_for_aircraft(db: Session, callsign: str) -> Optional[schemas.Route
                 try:
                     db.add(new_cache)
                     db.commit()
-                except IntegrityError:
+                except Exception:
                     db.rollback()
-                    # Already inserted by another concurrent request
                 
                 return schemas.RouteInfoResponse(
                     callsign=callsign,
