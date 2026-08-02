@@ -152,19 +152,20 @@ export default function AddFlight({ showNotification }) {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-5 border-b border-slate-700/50">
+      <div className="flex items-center justify-between pb-5 border-b border-bg-secondary">
         <div>
-          <h2 className="text-2xl font-extrabold font-heading text-white flex items-center gap-3">
-            <PlusCircle className="w-7 h-7 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" /> Add New Flight
+          <h2 className="text-2xl font-extrabold font-heading text-dark flex items-center gap-3">
+            <PlusCircle className="w-7 h-7 text-primary" />
+            File New Flight Plan
           </h2>
-          <p className="text-slate-400 text-xs mt-1.5 font-medium tracking-wide">
+          <p className="text-dark/80 text-sm mt-1.5 font-light tracking-wide">
             Register a new airway route telemetry record in airway.db.
           </p>
         </div>
 
         <Link
           to="/flights"
-          className="flex items-center gap-2 text-xs font-bold tracking-wide text-slate-400 hover:text-cyan-400 px-4 py-2.5 rounded-xl bg-slate-900/80 hover:bg-cyan-500/10 border border-slate-700/50 hover:border-cyan-500/30 transition-all shadow-lg hover:shadow-cyan-500/20"
+          className="flex items-center gap-2 text-xs font-bold tracking-wide text-dark/70 hover:text-primary px-4 py-2.5 rounded-xl bg-bg-primary hover:bg-bg-secondary border border-bg-secondary hover:border-primary/30 transition-all shadow-md"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to List</span>
@@ -172,10 +173,10 @@ export default function AddFlight({ showNotification }) {
       </div>
 
       {/* Preset Buttons Bar */}
-      <div className="p-5 rounded-2xl glass-panel border border-slate-700/50 space-y-3 shadow-lg relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-transparent pointer-events-none"></div>
-        <div className="flex items-center gap-2.5 text-[10px] font-bold text-cyan-400 uppercase font-mono tracking-widest relative z-10">
-          <Sparkles className="w-4 h-4 drop-shadow-[0_0_5px_rgba(34,211,238,0.6)]" /> Quick Route Presets
+      <div className="p-5 rounded-2xl glass-panel border border-bg-secondary space-y-3 shadow-lg relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none"></div>
+        <div className="flex items-center gap-2.5 text-[10px] font-bold text-primary uppercase font-mono tracking-widest relative z-10">
+          <Sparkles className="w-4 h-4" /> Quick Route Presets
         </div>
         <div className="flex flex-wrap gap-3 relative z-10">
           {PRESET_ROUTES.map((p, idx) => (
@@ -183,7 +184,7 @@ export default function AddFlight({ showNotification }) {
               key={idx}
               type="button"
               onClick={() => handleApplyPreset(p.data)}
-              className="px-4 py-2 rounded-xl bg-slate-900/80 hover:bg-cyan-500/20 border border-slate-700/50 hover:border-cyan-400/50 text-xs font-bold text-slate-300 hover:text-cyan-300 transition-all font-mono tracking-wide shadow-inner hover:shadow-[0_0_15px_rgba(34,211,238,0.2)] hover:scale-105"
+              className="px-4 py-2 rounded-xl bg-bg-primary hover:bg-primary/10 border border-bg-secondary hover:border-primary/40 text-xs font-bold text-dark/80 hover:text-primary transition-all font-mono tracking-wide shadow-sm hover:shadow-md hover:scale-105"
             >
               + {p.name}
             </button>
@@ -192,83 +193,83 @@ export default function AddFlight({ showNotification }) {
       </div>
 
       {/* Main Form Card */}
-      <form onSubmit={handleSubmit} className="p-8 rounded-2xl glass-panel border border-slate-700/50 space-y-8 shadow-2xl relative">
+      <form onSubmit={handleSubmit} className="p-8 rounded-2xl glass-panel border border-bg-secondary space-y-8 shadow-lg relative">
         {/* Section 1: Identification */}
         <div className="space-y-5">
-          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-cyan-400 border-b border-slate-700/50 pb-3 flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-cyan-500/20 flex items-center justify-center text-cyan-300">1</span> Flight Identification
+          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary border-b border-bg-secondary pb-3 flex items-center gap-2">
+            <span className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center text-primary">1</span> Flight Identification
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-400 mb-2 font-bold font-mono">Flight Number *</label>
+              <label className="block text-[10px] uppercase tracking-widest text-dark/70 mb-2 font-bold font-mono">Flight Number *</label>
               <input
                 type="text"
                 name="flight_number"
                 value={formData.flight_number}
                 onChange={handleChange}
                 placeholder="e.g. AI-202"
-                className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 font-mono shadow-inner transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-secondary text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 font-mono shadow-inner transition-all"
               />
-              {errors.flight_number && <p className="text-[10px] text-rose-400 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.flight_number}</p>}
+              {errors.flight_number && <p className="text-[10px] text-red-500 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.flight_number}</p>}
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-400 mb-2 font-bold font-mono">Aircraft Model / Name *</label>
+              <label className="block text-[10px] uppercase tracking-widest text-dark/70 mb-2 font-bold font-mono">Aircraft Model / Name *</label>
               <input
                 type="text"
                 name="aircraft_name"
                 value={formData.aircraft_name}
                 onChange={handleChange}
                 placeholder="e.g. Boeing 787-9 Dreamliner"
-                className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 shadow-inner transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-secondary text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 shadow-inner transition-all"
               />
-              {errors.aircraft_name && <p className="text-[10px] text-rose-400 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.aircraft_name}</p>}
+              {errors.aircraft_name && <p className="text-[10px] text-red-500 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.aircraft_name}</p>}
             </div>
           </div>
         </div>
 
         {/* Section 2: Route Terminals */}
         <div className="space-y-5">
-          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-cyan-400 border-b border-slate-700/50 pb-3 flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-cyan-500/20 flex items-center justify-center text-cyan-300">2</span> Route Terminals
+          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary border-b border-bg-secondary pb-3 flex items-center gap-2">
+            <span className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center text-primary">2</span> Route Terminals
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-400 mb-2 font-bold font-mono">Origin Airport *</label>
+              <label className="block text-[10px] uppercase tracking-widest text-dark/70 mb-2 font-bold font-mono">Origin Airport *</label>
               <input
                 type="text"
                 name="origin"
                 value={formData.origin}
                 onChange={handleChange}
                 placeholder="e.g. DEL (Indira Gandhi Intl)"
-                className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 shadow-inner transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-secondary text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 shadow-inner transition-all"
               />
-              {errors.origin && <p className="text-[10px] text-rose-400 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.origin}</p>}
+              {errors.origin && <p className="text-[10px] text-red-500 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.origin}</p>}
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-400 mb-2 font-bold font-mono">Destination Airport *</label>
+              <label className="block text-[10px] uppercase tracking-widest text-dark/70 mb-2 font-bold font-mono">Destination Airport *</label>
               <input
                 type="text"
                 name="destination"
                 value={formData.destination}
                 onChange={handleChange}
                 placeholder="e.g. LHR (London Heathrow)"
-                className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 shadow-inner transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-secondary text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 shadow-inner transition-all"
               />
-              {errors.destination && <p className="text-[10px] text-rose-400 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.destination}</p>}
+              {errors.destination && <p className="text-[10px] text-red-500 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.destination}</p>}
             </div>
           </div>
         </div>
 
         {/* Section 3: Telemetry Coordinates & Metrics */}
         <div className="space-y-5">
-          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-cyan-400 border-b border-slate-700/50 pb-3 flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-cyan-500/20 flex items-center justify-center text-cyan-300">3</span> Telemetry Coordinates & Performance Metrics
+          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary border-b border-bg-secondary pb-3 flex items-center gap-2">
+            <span className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center text-primary">3</span> Telemetry Coordinates & Performance Metrics
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-400 mb-2 font-bold font-mono">Latitude (-90 to 90) *</label>
+              <label className="block text-[10px] uppercase tracking-widest text-dark/70 mb-2 font-bold font-mono">Latitude (-90 to 90) *</label>
               <input
                 type="number"
                 step="any"
@@ -276,13 +277,13 @@ export default function AddFlight({ showNotification }) {
                 value={formData.latitude}
                 onChange={handleChange}
                 placeholder="28.5562"
-                className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 font-mono shadow-inner transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-secondary text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 font-mono shadow-inner transition-all"
               />
-              {errors.latitude && <p className="text-[10px] text-rose-400 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.latitude}</p>}
+              {errors.latitude && <p className="text-[10px] text-red-500 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.latitude}</p>}
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-400 mb-2 font-bold font-mono">Longitude (-180 to 180) *</label>
+              <label className="block text-[10px] uppercase tracking-widest text-dark/70 mb-2 font-bold font-mono">Longitude (-180 to 180) *</label>
               <input
                 type="number"
                 step="any"
@@ -290,26 +291,26 @@ export default function AddFlight({ showNotification }) {
                 value={formData.longitude}
                 onChange={handleChange}
                 placeholder="77.1000"
-                className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 font-mono shadow-inner transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-secondary text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 font-mono shadow-inner transition-all"
               />
-              {errors.longitude && <p className="text-[10px] text-rose-400 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.longitude}</p>}
+              {errors.longitude && <p className="text-[10px] text-red-500 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.longitude}</p>}
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-400 mb-2 font-bold font-mono">Altitude (Feet) *</label>
+              <label className="block text-[10px] uppercase tracking-widest text-dark/70 mb-2 font-bold font-mono">Altitude (Feet) *</label>
               <input
                 type="number"
                 name="altitude"
                 value={formData.altitude}
                 onChange={handleChange}
                 placeholder="35000"
-                className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 font-mono shadow-inner transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-secondary text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 font-mono shadow-inner transition-all"
               />
-              {errors.altitude && <p className="text-[10px] text-rose-400 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.altitude}</p>}
+              {errors.altitude && <p className="text-[10px] text-red-500 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.altitude}</p>}
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-400 mb-2 font-bold font-mono">Speed (Knots) *</label>
+              <label className="block text-[10px] uppercase tracking-widest text-dark/70 mb-2 font-bold font-mono">Speed (Knots) *</label>
               <input
                 type="number"
                 step="any"
@@ -317,13 +318,13 @@ export default function AddFlight({ showNotification }) {
                 value={formData.speed}
                 onChange={handleChange}
                 placeholder="485"
-                className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 font-mono shadow-inner transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-secondary text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 font-mono shadow-inner transition-all"
               />
-              {errors.speed && <p className="text-[10px] text-rose-400 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.speed}</p>}
+              {errors.speed && <p className="text-[10px] text-red-500 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.speed}</p>}
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-400 mb-2 font-bold font-mono">Heading (0 - 360°) *</label>
+              <label className="block text-[10px] uppercase tracking-widest text-dark/70 mb-2 font-bold font-mono">Heading (0 - 360°) *</label>
               <input
                 type="number"
                 step="any"
@@ -331,18 +332,18 @@ export default function AddFlight({ showNotification }) {
                 value={formData.heading}
                 onChange={handleChange}
                 placeholder="120"
-                className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 font-mono shadow-inner transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-secondary text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 font-mono shadow-inner transition-all"
               />
-              {errors.heading && <p className="text-[10px] text-rose-400 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.heading}</p>}
+              {errors.heading && <p className="text-[10px] text-red-500 font-mono mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.heading}</p>}
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-400 mb-2 font-bold font-mono">Initial Flight Status</label>
+              <label className="block text-[10px] uppercase tracking-widest text-dark/70 mb-2 font-bold font-mono">Initial Flight Status</label>
               <select
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs text-white focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 font-mono cursor-pointer shadow-inner transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-secondary text-xs text-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 font-mono cursor-pointer shadow-inner transition-all"
               >
                 <option value="In Flight">In Flight</option>
                 <option value="Scheduled">Scheduled</option>
@@ -355,17 +356,17 @@ export default function AddFlight({ showNotification }) {
         </div>
 
         {/* Submit Actions */}
-        <div className="flex justify-end gap-4 pt-6 border-t border-slate-700/50">
+        <div className="flex justify-end gap-4 pt-6 border-t border-bg-secondary">
           <Link
             to="/flights"
-            className="px-6 py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/50 text-xs font-bold text-slate-300 transition-all shadow-lg"
+            className="px-6 py-2.5 rounded-xl bg-bg-primary hover:brightness-90 border border-bg-secondary text-xs font-bold text-dark/80 transition-all shadow-md"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold tracking-wide shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 hover:scale-105"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary hover:brightness-90 text-white text-xs font-bold tracking-wide shadow-md transition-all disabled:opacity-50 hover:scale-105"
           >
             {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             <span>{isSubmitting ? 'Creating Record...' : 'Save Flight Record'}</span>

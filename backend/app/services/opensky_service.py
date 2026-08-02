@@ -156,7 +156,7 @@ def collect_live_aircraft(db: Session, refresh: bool = True) -> Dict[str, Any]:
             else:
                 logger.info("Using cached aircraft data to avoid rate limits (stampede prevented).")
                 
-    aircrafts = crud.get_current_aircraft_telemetry(db, limit=None)
+    aircrafts = crud.get_current_aircraft_telemetry(db, limit=700)
     logger.info(f"Total aircraft displayed (stored in SQLite): {len(aircrafts)}")
     
     return {

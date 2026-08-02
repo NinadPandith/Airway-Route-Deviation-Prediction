@@ -400,8 +400,8 @@ export default function LiveMonitoring({ showNotification }) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-slate-950">
         <div className="flex flex-col items-center gap-4">
-          <Plane className="w-12 h-12 text-cyan-500 animate-bounce" />
-          <div className="text-cyan-400 font-mono text-sm tracking-widest animate-pulse">ESTABLISHING SATELLITE UPLINK...</div>
+          <Plane className="w-12 h-12 text-primary animate-bounce" />
+          <div className="text-primary font-mono text-sm tracking-widest animate-pulse">ESTABLISHING SATELLITE UPLINK...</div>
         </div>
       </div>
     );
@@ -502,17 +502,17 @@ export default function LiveMonitoring({ showNotification }) {
       <div className="absolute top-6 left-6 right-[420px] z-[100] flex flex-col gap-4 pointer-events-none transition-all duration-500">
         <div className="flex items-center justify-between pointer-events-auto">
           {/* Top Stats Bar */}
-          <div className="glass-panel px-5 py-3 rounded-2xl flex items-center gap-6 shadow-[0_8px_30px_rgba(0,0,0,0.4)] border border-slate-700/50 backdrop-blur-xl">
+          <div className="bg-bg-primary/90 px-5 py-3 rounded-2xl flex items-center gap-6 shadow-md border border-bg-secondary backdrop-blur-xl">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
-                <Compass className="w-5 h-5 animate-spin-slow drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
+              <div className="p-2 rounded-xl bg-primary/20 border border-primary/30 text-primary">
+                <Compass className="w-5 h-5 animate-spin-slow" />
               </div>
               <div>
-                <div className="text-[9px] text-cyan-400/80 uppercase font-mono font-bold tracking-widest mb-0.5">Airway Monitor</div>
-                <div className="text-sm font-extrabold text-white font-heading tracking-wide">LIVE TELEMETRY</div>
+                <div className="text-[9px] text-primary uppercase font-mono font-bold tracking-widest mb-0.5">Airway Monitor</div>
+                <div className="text-sm font-extrabold text-dark font-heading tracking-wide">LIVE TELEMETRY</div>
               </div>
             </div>
-            <div className="h-8 w-px bg-slate-700/80"></div>
+            <div className="h-8 w-px bg-bg-secondary"></div>
             <div className="flex items-center gap-8">
               <StatItem icon={<Plane />} label="Active Flights" value={stats.total_live_aircraft} />
               <StatItem icon={<Gauge />} label="Fleet Avg Speed" value={`${Math.round(stats.average_speed)} kts`} />
@@ -524,14 +524,14 @@ export default function LiveMonitoring({ showNotification }) {
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setResetViewTrigger(prev => prev + 1)}
-              className="glass-panel p-3 rounded-xl text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 transition-all tooltip-trigger shadow-lg hover:shadow-cyan-500/20"
+              className="bg-bg-primary border border-bg-secondary p-3 rounded-xl text-dark/70 hover:text-primary hover:border-primary/50 transition-all tooltip-trigger shadow-md"
               title="Reset View to Bounds"
             >
               <Maximize className="w-5 h-5" />
             </button>
             <button 
               onClick={() => setShowFilters(!showFilters)}
-              className={`glass-panel p-3 rounded-xl transition-all shadow-lg ${showFilters ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30'}`}
+              className={`bg-bg-primary border p-3 rounded-xl transition-all shadow-md ${showFilters ? 'bg-primary/20 border-primary text-primary' : 'border-bg-secondary text-dark/70 hover:text-primary hover:border-primary/50'}`}
               title="Toggle Filters"
             >
               <Filter className="w-5 h-5" />
@@ -539,61 +539,61 @@ export default function LiveMonitoring({ showNotification }) {
             <button 
               onClick={() => loadData(false)}
               disabled={refreshing}
-              className="glass-panel p-3 rounded-xl text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-all shadow-lg hover:shadow-emerald-500/20 disabled:opacity-50"
+              className="bg-bg-primary border border-bg-secondary p-3 rounded-xl text-dark/70 hover:text-primary hover:border-primary/50 transition-all shadow-md disabled:opacity-50"
               title="Manual Refresh"
             >
-              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin text-emerald-400' : ''}`} />
+              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin text-primary' : ''}`} />
             </button>
           </div>
         </div>
 
         {/* Filters Panel */}
         {showFilters && (
-          <div className="glass-panel p-5 rounded-2xl w-full max-w-2xl self-end shadow-[0_8px_30px_rgba(0,0,0,0.5)] pointer-events-auto animate-fade-in border border-cyan-500/20 backdrop-blur-xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-50 pointer-events-none"></div>
+          <div className="bg-bg-primary/90 p-5 rounded-2xl w-full max-w-2xl self-end shadow-lg pointer-events-auto animate-fade-in border border-bg-secondary backdrop-blur-xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 pointer-events-none"></div>
             <div className="relative z-10 grid grid-cols-4 gap-5">
               <div className="col-span-4 sm:col-span-2">
-                <label className="text-[10px] font-mono font-bold text-cyan-400/80 uppercase mb-1.5 block tracking-widest">Search Callsign/ICAO</label>
+                <label className="text-[10px] font-mono font-bold text-primary uppercase mb-1.5 block tracking-widest">Search Callsign/ICAO</label>
                 <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-                  <input type="text" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} placeholder="Search..." className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-dark/50" />
+                  <input type="text" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} placeholder="Search..." className="w-full bg-bg-primary border border-bg-secondary rounded-xl pl-9 pr-4 py-2 text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all shadow-sm"/>
                 </div>
               </div>
               <div className="col-span-4 sm:col-span-2">
-                <label className="text-[10px] font-mono font-bold text-cyan-400/80 uppercase mb-1.5 block tracking-widest">Country Origin</label>
-                <input type="text" value={filters.country} onChange={e => setFilters({...filters, country: e.target.value})} placeholder="E.g. United States" className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
+                <label className="text-[10px] font-mono font-bold text-primary uppercase mb-1.5 block tracking-widest">Country Origin</label>
+                <input type="text" value={filters.country} onChange={e => setFilters({...filters, country: e.target.value})} placeholder="E.g. United States" className="w-full bg-bg-primary border border-bg-secondary rounded-xl px-4 py-2 text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all shadow-sm"/>
               </div>
               <div className="col-span-4 sm:col-span-2">
-                <label className="text-[10px] font-mono font-bold text-cyan-400/80 uppercase mb-1.5 block tracking-widest">Altitude Range (ft)</label>
+                <label className="text-[10px] font-mono font-bold text-primary uppercase mb-1.5 block tracking-widest">Altitude Range (ft)</label>
                 <div className="flex items-center gap-2">
-                  <input type="number" placeholder="Min" value={filters.minAlt} onChange={e => setFilters({...filters, minAlt: e.target.value})} className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
-                  <span className="text-slate-500 font-bold">-</span>
-                  <input type="number" placeholder="Max" value={filters.maxAlt} onChange={e => setFilters({...filters, maxAlt: e.target.value})} className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
+                  <input type="number" placeholder="Min" value={filters.minAlt} onChange={e => setFilters({...filters, minAlt: e.target.value})} className="w-full bg-bg-primary border border-bg-secondary rounded-xl px-3 py-2 text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all shadow-sm"/>
+                  <span className="text-dark/50 font-bold">-</span>
+                  <input type="number" placeholder="Max" value={filters.maxAlt} onChange={e => setFilters({...filters, maxAlt: e.target.value})} className="w-full bg-bg-primary border border-bg-secondary rounded-xl px-3 py-2 text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all shadow-sm"/>
                 </div>
               </div>
               <div className="col-span-4 sm:col-span-2">
-                <label className="text-[10px] font-mono font-bold text-cyan-400/80 uppercase mb-1.5 block tracking-widest">Speed Range (kts)</label>
+                <label className="text-[10px] font-mono font-bold text-primary uppercase mb-1.5 block tracking-widest">Speed Range (kts)</label>
                 <div className="flex items-center gap-2">
-                  <input type="number" placeholder="Min" value={filters.minSpeed} onChange={e => setFilters({...filters, minSpeed: e.target.value})} className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
-                  <span className="text-slate-500 font-bold">-</span>
-                  <input type="number" placeholder="Max" value={filters.maxSpeed} onChange={e => setFilters({...filters, maxSpeed: e.target.value})} className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"/>
+                  <input type="number" placeholder="Min" value={filters.minSpeed} onChange={e => setFilters({...filters, minSpeed: e.target.value})} className="w-full bg-bg-primary border border-bg-secondary rounded-xl px-3 py-2 text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all shadow-sm"/>
+                  <span className="text-dark/50 font-bold">-</span>
+                  <input type="number" placeholder="Max" value={filters.maxSpeed} onChange={e => setFilters({...filters, maxSpeed: e.target.value})} className="w-full bg-bg-primary border border-bg-secondary rounded-xl px-3 py-2 text-xs text-dark placeholder-dark/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all shadow-sm"/>
                 </div>
               </div>
-              <div className="col-span-4 flex items-center gap-6 mt-2 border-t border-slate-700/50 pt-4">
-                <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer hover:text-white transition-colors group">
-                  <input type="checkbox" checked={filters.showDelayed} onChange={e => setFilters({...filters, showDelayed: e.target.checked})} className="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-cyan-500" />
-                  <span className="group-hover:text-cyan-400 transition-colors">Show Delayed Only</span>
+              <div className="col-span-4 flex items-center gap-6 mt-2 border-t border-bg-secondary pt-4">
+                <label className="flex items-center gap-2 text-xs font-medium text-dark/80 cursor-pointer hover:text-dark transition-colors group">
+                  <input type="checkbox" checked={filters.showDelayed} onChange={e => setFilters({...filters, showDelayed: e.target.checked})} className="rounded bg-bg-primary border-bg-secondary text-primary focus:ring-primary" />
+                  <span className="group-hover:text-primary transition-colors">Show Delayed Only</span>
                 </label>
-                <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer hover:text-white transition-colors group">
-                  <input type="checkbox" checked={filters.showHighRisk} onChange={e => setFilters({...filters, showHighRisk: e.target.checked})} className="rounded bg-slate-900 border-slate-700 text-orange-500 focus:ring-orange-500" />
-                  <span className="group-hover:text-orange-400 transition-colors">Show High-Risk Only</span>
+                <label className="flex items-center gap-2 text-xs font-medium text-dark/80 cursor-pointer hover:text-dark transition-colors group">
+                  <input type="checkbox" checked={filters.showHighRisk} onChange={e => setFilters({...filters, showHighRisk: e.target.checked})} className="rounded bg-bg-primary border-bg-secondary text-orange-500 focus:ring-orange-500" />
+                  <span className="group-hover:text-orange-600 transition-colors">Show High-Risk Only</span>
                 </label>
                 <div className="flex items-center gap-3 ml-auto">
-                  <label className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">Max Display:</label>
+                  <label className="text-[10px] font-mono font-bold text-dark/80 uppercase tracking-widest">Max Display:</label>
                   <select 
                     value={filters.maxAircraft} 
                     onChange={e => setFilters({...filters, maxAircraft: e.target.value})}
-                    className="bg-slate-900/80 border border-slate-700/60 rounded-lg px-2 py-1 text-xs font-medium text-white focus:outline-none focus:border-cyan-500/50 cursor-pointer"
+                    className="bg-bg-primary border border-bg-secondary rounded-lg px-2 py-1 text-xs font-medium text-dark focus:outline-none focus:border-primary cursor-pointer"
                   >
                     <option value="300">300 Aircraft</option>
                     <option value="500">500 Aircraft</option>
@@ -607,15 +607,15 @@ export default function LiveMonitoring({ showNotification }) {
         )}
       </div>
 
-      <div className={`absolute top-0 right-0 h-full w-[420px] glass-panel border-l border-slate-700/50 z-[200] transform transition-transform duration-500 ease-out flex flex-col shadow-[-10px_0_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl bg-slate-950/80 ${selectedAircraft ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`absolute top-0 right-0 h-full w-[420px] bg-bg-primary/95 border-l border-bg-secondary z-[200] transform transition-transform duration-500 ease-out flex flex-col shadow-[0_0_30px_rgba(0,0,0,0.1)] backdrop-blur-2xl ${selectedAircraft ? 'translate-x-0' : 'translate-x-full'}`}>
         {selectedAircraft && (
           <>
-            <div className="flex items-center justify-between p-5 border-b border-slate-700/50 bg-gradient-to-r from-slate-900/90 to-slate-900/60 sticky top-0 z-10 shadow-md">
+            <div className="flex items-center justify-between p-5 border-b border-bg-secondary bg-bg-primary sticky top-0 z-10 shadow-sm">
               <div>
-                <h2 className="text-xl font-extrabold text-white font-heading tracking-wide drop-shadow-sm">{selectedAircraft.callsign || 'UNKNOWN CALLSIGN'}</h2>
-                <div className="text-xs text-cyan-400 font-mono font-bold tracking-widest mt-1">ICAO: {selectedAircraft.icao24}</div>
+                <h2 className="text-xl font-extrabold text-dark font-heading tracking-wide drop-shadow-sm">{selectedAircraft.callsign || 'UNKNOWN CALLSIGN'}</h2>
+                <div className="text-xs text-primary font-mono font-bold tracking-widest mt-1">ICAO: {selectedAircraft.icao24}</div>
               </div>
-              <button onClick={closePanel} className="p-2.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-all hover:rotate-90">
+              <button onClick={closePanel} className="p-2.5 rounded-full hover:bg-bg-secondary text-dark/70 hover:text-dark transition-all hover:rotate-90">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -623,13 +623,13 @@ export default function LiveMonitoring({ showNotification }) {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar pb-24">
               
               {/* FLIGHT INFORMATION */}
-              <div className="border border-slate-700/50 rounded-2xl overflow-hidden bg-slate-900/40 shadow-lg">
-                <button onClick={() => toggleSection('flight')} className="w-full p-4 flex items-center justify-between bg-slate-900/80 hover:bg-slate-800/80 transition-colors group">
-                  <span className="text-xs font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2.5"><Plane className="w-4.5 h-4.5 text-cyan-500 group-hover:scale-110 transition-transform" /> Flight Information</span>
-                  {expandedSections.flight ? <ChevronDown className="w-4.5 h-4.5 text-cyan-500" /> : <ChevronRight className="w-4.5 h-4.5 text-slate-500 group-hover:text-cyan-400" />}
+              <div className="border border-bg-secondary rounded-2xl overflow-hidden bg-bg-primary shadow-sm">
+                <button onClick={() => toggleSection('flight')} className="w-full p-4 flex items-center justify-between bg-bg-secondary/50 hover:bg-bg-secondary transition-colors group">
+                  <span className="text-xs font-bold text-dark uppercase tracking-widest flex items-center gap-2.5"><Plane className="w-4.5 h-4.5 text-primary group-hover:scale-110 transition-transform" /> Flight Information</span>
+                  {expandedSections.flight ? <ChevronDown className="w-4.5 h-4.5 text-primary" /> : <ChevronRight className="w-4.5 h-4.5 text-dark/50 group-hover:text-primary" />}
                 </button>
                 {expandedSections.flight && (
-                  <div className="p-4 grid grid-cols-2 gap-3 border-t border-slate-700/50">
+                  <div className="p-4 grid grid-cols-2 gap-3 border-t border-bg-secondary">
                     <InfoCell label="Origin Country" value={selectedAircraft.origin_country || 'Unknown'} />
                     <InfoCell label="Airline" value={routeInfo?.airline || 'Unknown'} />
                     <InfoCell label="Flight Number" value={routeInfo?.flight_number || selectedAircraft.callsign || 'Unknown'} />
@@ -647,44 +647,44 @@ export default function LiveMonitoring({ showNotification }) {
               </div>
 
               {/* ROUTE INFORMATION */}
-              <div className="border border-slate-700/50 rounded-2xl overflow-hidden bg-slate-900/40 shadow-lg">
-                <button onClick={() => toggleSection('route')} className="w-full p-4 flex items-center justify-between bg-slate-900/80 hover:bg-slate-800/80 transition-colors group">
-                  <span className="text-xs font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2.5"><MapPin className="w-4.5 h-4.5 text-emerald-500 group-hover:scale-110 transition-transform" /> Route Visualization</span>
-                  {expandedSections.route ? <ChevronDown className="w-4.5 h-4.5 text-emerald-500" /> : <ChevronRight className="w-4.5 h-4.5 text-slate-500 group-hover:text-emerald-400" />}
+              <div className="border border-bg-secondary rounded-2xl overflow-hidden bg-bg-primary shadow-sm">
+                <button onClick={() => toggleSection('route')} className="w-full p-4 flex items-center justify-between bg-bg-secondary/50 hover:bg-bg-secondary transition-colors group">
+                  <span className="text-xs font-bold text-dark uppercase tracking-widest flex items-center gap-2.5"><MapPin className="w-4.5 h-4.5 text-primary group-hover:scale-110 transition-transform" /> Route Visualization</span>
+                  {expandedSections.route ? <ChevronDown className="w-4.5 h-4.5 text-primary" /> : <ChevronRight className="w-4.5 h-4.5 text-dark/50 group-hover:text-primary" />}
                 </button>
                 {expandedSections.route && (
-                  <div className="p-4 border-t border-slate-700/50">
+                  <div className="p-4 border-t border-bg-secondary">
                     {!routeInfo ? (
-                       <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-400 tracking-wider"><RefreshCw className="w-3.5 h-3.5 animate-spin"/> Resolving Flight Path...</div>
+                       <div className="flex items-center gap-2 text-xs font-mono font-bold text-dark/70 tracking-wider"><RefreshCw className="w-3.5 h-3.5 animate-spin"/> Resolving Flight Path...</div>
                     ) : routeInfo.error ? (
-                       <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-400 tracking-wider"><AlertCircle className="w-3.5 h-3.5 text-amber-500"/> Route information unavailable</div>
+                       <div className="flex items-center gap-2 text-xs font-mono font-bold text-dark/70 tracking-wider"><AlertCircle className="w-3.5 h-3.5 text-red-500"/> Route information unavailable</div>
                     ) : (
                       <div className="flex flex-col relative pb-3">
-                        <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gradient-to-b from-cyan-500/50 to-indigo-500/50 border-dashed border-l border-cyan-500/30"></div>
+                        <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gradient-to-b from-primary to-secondary border-dashed border-l border-primary/30"></div>
                         
                         <div className="flex gap-4 items-start relative z-10">
-                          <div className="w-12 h-12 rounded-xl bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center shrink-0 shadow-lg font-mono font-bold text-cyan-400">
+                          <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary text-primary flex items-center justify-center shrink-0 shadow-sm font-mono font-bold">
                             {routeInfo.origin_iata || '?'}
                           </div>
                           <div className="pt-1">
-                            <div className="text-[10px] text-cyan-400/80 uppercase font-mono font-bold tracking-widest">Origin</div>
-                            <div className="text-sm font-bold text-white tracking-wide">{routeInfo.origin_airport || 'Unknown Airport'}</div>
-                            <div className="text-[10px] text-slate-400 mt-0.5">{routeInfo.origin_lat?.toFixed(4)}, {routeInfo.origin_lon?.toFixed(4)}</div>
+                            <div className="text-[10px] text-primary uppercase font-mono font-bold tracking-widest">Origin</div>
+                            <div className="text-sm font-bold text-dark tracking-wide">{routeInfo.origin_airport || 'Unknown Airport'}</div>
+                            <div className="text-[10px] text-dark/60 mt-0.5">{routeInfo.origin_lat?.toFixed(4)}, {routeInfo.origin_lon?.toFixed(4)}</div>
                           </div>
                         </div>
                         
                         <div className="h-8 flex flex-col justify-center ml-[23px] my-2">
-                           <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse"></div>
+                           <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-sm animate-pulse"></div>
                         </div>
                         
                         <div className="flex gap-4 items-start relative z-10">
-                          <div className="w-12 h-12 rounded-xl bg-indigo-950/60 border border-indigo-500/40 flex items-center justify-center shrink-0 shadow-lg font-mono font-bold text-indigo-400">
+                          <div className="w-12 h-12 rounded-xl bg-secondary/30 border border-secondary text-secondary flex items-center justify-center shrink-0 shadow-sm font-mono font-bold">
                             {routeInfo.destination_iata || '?'}
                           </div>
                           <div className="pt-1">
-                            <div className="text-[10px] text-indigo-400/80 uppercase font-mono font-bold tracking-widest">Destination</div>
-                            <div className="text-sm font-bold text-white tracking-wide">{routeInfo.destination_airport || 'Unknown Airport'}</div>
-                            <div className="text-[10px] text-slate-400 mt-0.5">{routeInfo.destination_lat?.toFixed(4)}, {routeInfo.destination_lon?.toFixed(4)}</div>
+                            <div className="text-[10px] text-secondary uppercase font-mono font-bold tracking-widest">Destination</div>
+                            <div className="text-sm font-bold text-dark tracking-wide">{routeInfo.destination_airport || 'Unknown Airport'}</div>
+                            <div className="text-[10px] text-dark/60 mt-0.5">{routeInfo.destination_lat?.toFixed(4)}, {routeInfo.destination_lon?.toFixed(4)}</div>
                           </div>
                         </div>
                       </div>
@@ -694,30 +694,30 @@ export default function LiveMonitoring({ showNotification }) {
               </div>
 
               {/* WEATHER DATA */}
-              <div className="border border-slate-700/50 rounded-2xl overflow-hidden bg-slate-900/40 shadow-lg">
-                <button onClick={() => toggleSection('weather')} className="w-full p-4 flex items-center justify-between bg-slate-900/80 hover:bg-slate-800/80 transition-colors group">
-                  <span className="text-xs font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2.5"><Thermometer className="w-4.5 h-4.5 text-amber-500 group-hover:scale-110 transition-transform" /> Atmospheric Telemetry</span>
-                  {expandedSections.weather ? <ChevronDown className="w-4.5 h-4.5 text-amber-500" /> : <ChevronRight className="w-4.5 h-4.5 text-slate-500 group-hover:text-amber-400" />}
+              <div className="border border-bg-secondary rounded-2xl overflow-hidden bg-bg-primary shadow-sm">
+                <button onClick={() => toggleSection('weather')} className="w-full p-4 flex items-center justify-between bg-bg-secondary/50 hover:bg-bg-secondary transition-colors group">
+                  <span className="text-xs font-bold text-dark uppercase tracking-widest flex items-center gap-2.5"><Thermometer className="w-4.5 h-4.5 text-primary group-hover:scale-110 transition-transform" /> Atmospheric Telemetry</span>
+                  {expandedSections.weather ? <ChevronDown className="w-4.5 h-4.5 text-primary" /> : <ChevronRight className="w-4.5 h-4.5 text-dark/50 group-hover:text-primary" />}
                 </button>
                 {expandedSections.weather && (
-                  <div className="p-4 border-t border-slate-700/50">
+                  <div className="p-4 border-t border-bg-secondary">
                     {weather === null ? (
-                      <div className="h-20 flex items-center justify-center gap-2 text-slate-400 text-xs font-mono font-bold tracking-wider">
-                        <Cloud className="w-4 h-4 animate-pulse text-slate-500" /> Fetching atmospherics...
+                      <div className="h-20 flex items-center justify-center gap-2 text-dark/70 text-xs font-mono font-bold tracking-wider">
+                        <Cloud className="w-4 h-4 animate-pulse text-dark/50" /> Fetching atmospherics...
                       </div>
                     ) : weather.error ? (
-                      <div className="h-20 flex items-center justify-center gap-2 text-amber-500 text-xs font-mono font-bold tracking-wider">
+                      <div className="h-20 flex items-center justify-center gap-2 text-red-500 text-xs font-mono font-bold tracking-wider">
                         <AlertTriangle className="w-4 h-4" /> Weather unavailable
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="flex items-center gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800/60">
-                          <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 text-amber-400">
+                        <div className="flex items-center gap-4 bg-bg-primary p-4 rounded-xl border border-bg-secondary">
+                          <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 text-primary">
                             {getWeatherIcon(weather.description)}
                           </div>
                           <div>
-                            <div className="text-xl font-bold font-heading text-white">{Math.round(weather.temperature)}°C</div>
-                            <div className="text-xs text-amber-400 font-mono font-bold capitalize tracking-wide">{weather.description}</div>
+                            <div className="text-xl font-bold font-heading text-dark">{Math.round(weather.temperature)}°C</div>
+                            <div className="text-xs text-primary font-mono font-bold capitalize tracking-wide">{weather.description}</div>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
@@ -733,25 +733,25 @@ export default function LiveMonitoring({ showNotification }) {
               </div>
 
               {/* AI PREDICTION MODEL */}
-              <div className="border border-emerald-500/30 rounded-2xl overflow-hidden bg-slate-900/40 relative shadow-[0_0_15px_rgba(16,185,129,0.1)] group">
-                <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(16,185,129,0.05)_50%,transparent_75%)] bg-[length:250%_250%] animate-scan pointer-events-none"></div>
-                <button onClick={() => toggleSection('prediction')} className="w-full p-4 flex items-center justify-between bg-slate-900/80 hover:bg-slate-800/80 transition-colors">
-                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2.5">
-                    <Activity className="w-4.5 h-4.5 drop-shadow-[0_0_5px_rgba(16,185,129,0.6)] group-hover:animate-pulse" /> Machine Learning Prediction
+              <div className="border border-primary rounded-2xl overflow-hidden bg-bg-primary relative shadow-md group">
+                <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(118,183,166,0.1)_50%,transparent_75%)] bg-[length:250%_250%] animate-scan pointer-events-none"></div>
+                <button onClick={() => toggleSection('prediction')} className="w-full p-4 flex items-center justify-between bg-bg-secondary/50 hover:bg-bg-secondary transition-colors">
+                  <span className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2.5">
+                    <Activity className="w-4.5 h-4.5 group-hover:animate-pulse" /> Machine Learning Prediction
                   </span>
-                  {expandedSections.prediction ? <ChevronDown className="w-4.5 h-4.5 text-emerald-400" /> : <ChevronRight className="w-4.5 h-4.5 text-slate-500 group-hover:text-emerald-400" />}
+                  {expandedSections.prediction ? <ChevronDown className="w-4.5 h-4.5 text-primary" /> : <ChevronRight className="w-4.5 h-4.5 text-dark/50 group-hover:text-primary" />}
                 </button>
                 {expandedSections.prediction && (
-                  <div className="p-4 border-t border-slate-700/50 relative z-10">
+                  <div className="p-4 border-t border-bg-secondary relative z-10">
                     {predicting ? (
                       <div className="flex flex-col items-center justify-center py-6">
-                        <RefreshCw className="w-6 h-6 text-emerald-400 animate-spin mb-3 drop-shadow-md" />
-                        <div className="text-[10px] text-emerald-400 font-mono font-bold tracking-widest animate-pulse">RUNNING NEURAL INFERENCE...</div>
+                        <RefreshCw className="w-6 h-6 text-primary animate-spin mb-3 drop-shadow-md" />
+                        <div className="text-[10px] text-primary font-mono font-bold tracking-widest animate-pulse">RUNNING NEURAL INFERENCE...</div>
                       </div>
                     ) : prediction && !prediction.error ? (
                       <div>
                         <div className="text-center mb-5">
-                          <div className={`inline-block px-4 py-2 rounded-xl border text-[11px] font-mono font-extrabold tracking-widest uppercase shadow-lg ${getRiskColor(prediction.risk_level)}`}>
+                          <div className={`inline-block px-4 py-2 rounded-xl border text-[11px] font-mono font-extrabold tracking-widest uppercase shadow-md ${getRiskColor(prediction.risk_level)}`}>
                             {prediction.risk_level}
                           </div>
                         </div>
@@ -775,50 +775,50 @@ export default function LiveMonitoring({ showNotification }) {
 
                             return (
                               <>
-                                <div className="col-span-2 p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 text-center shadow-inner">
-                                  <div className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-widest">Route Interpolation</div>
+                                <div className="col-span-2 p-3 rounded-xl bg-bg-primary border border-bg-secondary text-center shadow-sm">
+                                  <div className="text-[10px] text-dark/70 uppercase font-mono font-bold tracking-widest">Route Interpolation</div>
                                   {!hasRoute ? (
-                                    <div className="text-sm font-extrabold text-amber-500 mt-1">Route information unavailable</div>
+                                    <div className="text-sm font-extrabold text-red-500 mt-1">Route information unavailable</div>
                                   ) : (
-                                    <div className="text-sm font-extrabold text-white mt-1">
-                                      {routeInfo.origin_airport || routeInfo.origin_iata} <span className="text-slate-600 mx-2">→</span> {routeInfo.destination_airport || routeInfo.destination_iata}
+                                    <div className="text-sm font-extrabold text-dark mt-1">
+                                      {routeInfo.origin_airport || routeInfo.origin_iata} <span className="text-dark/40 mx-2">→</span> {routeInfo.destination_airport || routeInfo.destination_iata}
                                     </div>
                                   )}
                                 </div>
                                 
                                 {!hasRoute ? (
-                                  <div className="col-span-2 p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 text-center shadow-inner">
-                                    <div className="text-sm font-bold text-slate-400">N/A (Route data unavailable)</div>
+                                  <div className="col-span-2 p-3 rounded-xl bg-bg-primary border border-bg-secondary text-center shadow-sm">
+                                    <div className="text-sm font-bold text-dark/70">N/A (Route data unavailable)</div>
                                   </div>
                                 ) : (
                                   <>
-                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Planned Dist.</div>
-                                      <div className="text-sm font-bold text-emerald-400">{prediction.planned_route_distance ? prediction.planned_route_distance + ' km' : 'N/A'}</div>
+                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
+                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Planned Dist.</div>
+                                      <div className="text-sm font-bold text-dark">{prediction.planned_route_distance ? prediction.planned_route_distance + ' km' : 'N/A'}</div>
                                     </div>
-                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Dist. Travelled</div>
-                                      <div className="text-sm font-bold text-blue-400">{prediction.current_distance_travelled ? prediction.current_distance_travelled + ' km' : 'N/A'}</div>
+                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
+                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Dist. Travelled</div>
+                                      <div className="text-sm font-bold text-dark">{prediction.current_distance_travelled ? prediction.current_distance_travelled + ' km' : 'N/A'}</div>
                                     </div>
-                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Remaining Dist.</div>
-                                      <div className="text-sm font-bold text-indigo-400">{remainingDist > 0 ? remainingDist.toFixed(2) + ' km' : 'N/A'}</div>
+                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
+                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Remaining Dist.</div>
+                                      <div className="text-sm font-bold text-dark">{remainingDist > 0 ? remainingDist.toFixed(2) + ' km' : 'N/A'}</div>
                                     </div>
-                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Completion %</div>
-                                      <div className="text-sm font-bold text-indigo-400">{completionPct > 0 ? completionPct + '%' : 'N/A'}</div>
+                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
+                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Completion %</div>
+                                      <div className="text-sm font-bold text-dark">{completionPct > 0 ? completionPct + '%' : 'N/A'}</div>
                                     </div>
-                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Deviation Dist.</div>
-                                      <div className="text-sm font-bold text-amber-400">{prediction.deviation_distance ? prediction.deviation_distance + ' km' : 'N/A'}</div>
+                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
+                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Deviation Dist.</div>
+                                      <div className="text-sm font-bold text-dark">{prediction.deviation_distance ? prediction.deviation_distance + ' km' : 'N/A'}</div>
                                     </div>
-                                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Deviation %</div>
-                                      <div className="text-sm font-bold text-amber-400">{prediction.deviation_percentage ? prediction.deviation_percentage + '%' : 'N/A'}</div>
+                                    <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
+                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Deviation %</div>
+                                      <div className="text-sm font-bold text-dark">{prediction.deviation_percentage ? prediction.deviation_percentage + '%' : 'N/A'}</div>
                                     </div>
-                                    <div className="col-span-2 p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner text-center">
-                                      <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Estimated Arrival</div>
-                                      <div className="text-sm font-bold text-cyan-400">{estimatedArrival}</div>
+                                    <div className="col-span-2 p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm text-center">
+                                      <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Estimated Arrival</div>
+                                      <div className="text-sm font-bold text-primary">{estimatedArrival}</div>
                                     </div>
                                   </>
                                 )}
@@ -826,36 +826,36 @@ export default function LiveMonitoring({ showNotification }) {
                             );
                           })()}
                           
-                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Weather Risk</div>
-                            <div className="text-sm font-bold text-slate-200">{prediction.weather_risk} <span className="text-[10px] text-slate-500 font-mono">({prediction.weather_impact_score}%)</span></div>
+                          <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
+                            <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Weather Risk</div>
+                            <div className="text-sm font-bold text-dark">{prediction.weather_risk} <span className="text-[10px] text-dark/50 font-mono">({prediction.weather_impact_score}%)</span></div>
                           </div>
-                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Predicted Delay</div>
-                            <div className="text-sm font-bold text-rose-400">{prediction.estimated_delay}m</div>
-                          </div>
-                          
-                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Overall Risk</div>
-                            <div className="text-sm font-bold text-slate-200">{prediction.overall_risk_score ? prediction.overall_risk_score + '%' : 'N/A'}</div>
-                          </div>
-                          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner">
-                            <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">Confidence</div>
-                            <div className="text-sm font-bold text-slate-200">{prediction.confidence_score ? prediction.confidence_score + '%' : Math.round(prediction.probability * 100) + '%'}</div>
+                          <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
+                            <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Predicted Delay</div>
+                            <div className="text-sm font-bold text-red-600">{prediction.estimated_delay}m</div>
                           </div>
                           
-                          <div className="col-span-2 p-4 rounded-xl bg-slate-950/60 border border-slate-700/50 text-center shadow-inner mt-1">
-                            <div className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-2">Suggested Action</div>
-                            <div className="text-xs font-bold text-cyan-400 bg-cyan-500/10 inline-block px-3 py-1.5 rounded-lg border border-cyan-500/20">{prediction.suggested_action || 'N/A'}</div>
+                          <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
+                            <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Overall Risk</div>
+                            <div className="text-sm font-bold text-dark">{prediction.overall_risk_score ? prediction.overall_risk_score + '%' : 'N/A'}</div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm">
+                            <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">Confidence</div>
+                            <div className="text-sm font-bold text-dark">{prediction.confidence_score ? prediction.confidence_score + '%' : Math.round(prediction.probability * 100) + '%'}</div>
+                          </div>
+                          
+                          <div className="col-span-2 p-4 rounded-xl bg-bg-primary border border-bg-secondary text-center shadow-sm mt-1">
+                            <div className="text-[10px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-2">Suggested Action</div>
+                            <div className="text-xs font-bold text-primary bg-primary/10 inline-block px-3 py-1.5 rounded-lg border border-primary/30">{prediction.suggested_action || 'N/A'}</div>
                           </div>
                         </div>
                       </div>
                     ) : (
                       <div className="text-center py-6 space-y-2">
-                        <div className="inline-block px-4 py-1.5 rounded-xl bg-slate-900/60 border border-slate-700 text-slate-400 text-[10px] font-mono font-bold tracking-widest shadow-inner">
+                        <div className="inline-block px-4 py-1.5 rounded-xl bg-bg-secondary border border-bg-secondary text-dark/70 text-[10px] font-mono font-bold tracking-widest shadow-inner">
                           PREDICTION FAILED
                         </div>
-                        <div className="text-[10px] text-rose-400 font-mono px-4">{prediction.message || 'Unknown error during inference'}</div>
+                        <div className="text-[10px] text-red-600 font-mono px-4">{prediction.message || 'Unknown error during inference'}</div>
                       </div>
                     )}
                   </div>
@@ -871,41 +871,41 @@ export default function LiveMonitoring({ showNotification }) {
 
 const StatItem = ({ icon, label, value }) => (
   <div className="flex items-center gap-2.5">
-    <div className="text-cyan-400 [&>svg]:w-4.5 [&>svg]:h-4.5 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">{icon}</div>
+    <div className="text-primary [&>svg]:w-4.5 [&>svg]:h-4.5">{icon}</div>
     <div>
-      <div className="text-[9px] text-slate-400 font-mono font-bold uppercase tracking-widest mb-0.5">{label}</div>
-      <div className="text-sm font-extrabold text-white font-mono tracking-wide">{value}</div>
+      <div className="text-[9px] text-dark/70 font-mono font-bold uppercase tracking-widest mb-0.5">{label}</div>
+      <div className="text-sm font-extrabold text-dark font-mono tracking-wide">{value}</div>
     </div>
   </div>
 );
 
 const InfoCell = ({ label, value, highlight }) => (
-  <div className={`p-3 rounded-xl border shadow-inner transition-colors ${highlight ? 'bg-cyan-500/10 border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.05)]' : 'bg-slate-950/60 border-slate-700/50 hover:bg-slate-900/60'}`}>
-    <div className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-widest mb-1">{label}</div>
-    <div className={`text-xs font-mono font-bold truncate ${highlight ? 'text-cyan-400 drop-shadow-sm' : 'text-slate-200'}`}>{value}</div>
+  <div className={`p-3 rounded-xl border transition-colors ${highlight ? 'bg-primary/10 border-primary/30 shadow-sm' : 'bg-bg-primary border-bg-secondary hover:bg-bg-secondary'}`}>
+    <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">{label}</div>
+    <div className={`text-xs font-mono font-bold truncate ${highlight ? 'text-primary' : 'text-dark'}`}>{value}</div>
   </div>
 );
 
 const WeatherCell = ({ icon, label, value }) => (
-  <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-950/60 border border-slate-700/50 shadow-inner hover:bg-slate-900/60 transition-colors">
-    <div className="text-slate-400 mb-1.5 [&>svg]:w-4 [&>svg]:h-4">{icon}</div>
-    <div className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-widest mb-1">{label}</div>
-    <div className="text-[11px] font-bold text-slate-200 font-mono">{value}</div>
+  <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-bg-primary border border-bg-secondary shadow-sm hover:bg-bg-secondary transition-colors">
+    <div className="text-primary mb-1.5 [&>svg]:w-4 [&>svg]:h-4">{icon}</div>
+    <div className="text-[9px] text-dark/70 uppercase font-mono font-bold tracking-widest mb-1">{label}</div>
+    <div className="text-[11px] font-bold text-dark font-mono">{value}</div>
   </div>
 );
 
 const getWeatherIcon = (desc) => {
   if (!desc) return <Cloud />;
   const lower = desc.toLowerCase();
-  if (lower.includes('rain')) return <CloudRain className="text-blue-400" />;
-  if (lower.includes('clear')) return <Wind className="text-cyan-400" />;
-  return <Cloud className="text-slate-400" />;
+  if (lower.includes('rain')) return <CloudRain className="text-blue-500" />;
+  if (lower.includes('clear')) return <Wind className="text-primary" />;
+  return <Cloud className="text-dark/50" />;
 };
 
 const getRiskColor = (risk) => {
-  if (risk === 'Low Risk') return 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.2)]';
-  if (risk === 'Medium Risk') return 'text-amber-400 border-amber-500/30 bg-amber-500/10 shadow-[0_0_15px_rgba(251,191,36,0.2)]';
-  if (risk === 'High Risk') return 'text-orange-400 border-orange-500/30 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.2)]';
-  if (risk === 'Critical Risk' || risk === 'Severe Weather') return 'text-rose-400 border-rose-500/30 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.2)] animate-pulse';
-  return 'text-slate-400 border-slate-700 bg-slate-900/60';
+  if (risk === 'Low Risk') return 'text-green-700 border-green-500 bg-green-100 shadow-sm';
+  if (risk === 'Medium Risk') return 'text-amber-700 border-amber-500 bg-amber-100 shadow-sm';
+  if (risk === 'High Risk') return 'text-orange-700 border-orange-500 bg-orange-100 shadow-sm';
+  if (risk === 'Critical Risk' || risk === 'Severe Weather') return 'text-red-700 border-red-500 bg-red-100 shadow-sm animate-pulse';
+  return 'text-dark/70 border-bg-secondary bg-bg-primary';
 };

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    expose:
+      - "8000"  # Expose only to internal network (Nginx), not the host
+    volumes:
+      - prod_db_data:/app/data
+    env_file:
+      - ./backend/.env.production
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "80:80"  # Expose Nginx proxy to the public host
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  prod_db_data:

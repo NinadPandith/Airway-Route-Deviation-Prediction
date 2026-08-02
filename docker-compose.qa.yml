@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  backend-qa:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - qa_db_data:/app/data  # Independent database for QA
+    env_file:
+      - ./backend/.env.qa
+    
+  frontend-qa:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5174:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8001/api
+    depends_on:
+      - backend-qa
+
+volumes:
+  qa_db_data:

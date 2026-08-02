@@ -24,7 +24,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen text-slate-100 flex flex-col font-sans overflow-hidden">
+    <div className="min-h-screen text-dark flex flex-col font-sans overflow-hidden bg-bg-primary">
       {/* Top Header */}
       <Navbar />
 
