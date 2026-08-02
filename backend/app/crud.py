@@ -149,7 +149,11 @@ def bulk_upsert_aircraft_telemetry(db: Session, aircraft_data_list: List[dict]):
 
 def get_current_aircraft_telemetry(db: Session, limit: Optional[int] = None) -> List[models.AircraftTelemetry]:
     """Return the latest aircraft telemetry snapshot per aircraft."""
-    query = db.query(models.AircraftTelemetry).order_by(models.AircraftTelemetry.timestamp.desc())
+    query = (
+        db.query(models.AircraftTelemetry)
+        .filter(models.AircraftTelemetry.latitude.is_not(None), models.AircraftTelemetry.longitude.is_not(None))
+        .order_by(models.AircraftTelemetry.timestamp.desc())
+    )
     if limit is not None:
         query = query.limit(limit)
     return query.all()
