@@ -12,11 +12,13 @@ pydantic
 python-dotenv
 python-multipart
 requests
+airportsdata
 
 # Data Processing
 pandas
 numpy
 matplotlib
+seaborn
 
 # Machine Learning
 scikit-learn
