@@ -70,8 +70,8 @@ flowchart LR
 **Manually:**
 
 ```bash
-git clone https://github.com/NinadPandith/ML_INTERNSHIP.git
-cd ML_INTERNSHIP
+git clone https://github.com/NinadPandith/Airway-Route-Deviation-Prediction.git
+cd Airway-Route-Deviation-Prediction
 
 # Backend
 cd backend
